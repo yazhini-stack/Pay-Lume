@@ -18,18 +18,16 @@ app = FastAPI(
 )
 
 # Configure CORS origins
-allowed_origins = [
-    settings.FRONTEND_ORIGIN,
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:3001"
-]
-# Remove duplicates while preserving order
-allowed_origins = list(dict.fromkeys(allowed_origins))
+raw_origins = (settings.FRONTEND_ORIGIN or "").split(",")
+allowed_origins = [o.strip() for o in raw_origins if o.strip()]
+for default_origin in ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"]:
+    if default_origin not in allowed_origins:
+        allowed_origins.append(default_origin)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -10,7 +10,37 @@ import { EvidencePayload } from "@/types/evidence";
 import { supabase } from "@/lib/supabase/client";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === "true";
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+/**
+ * Resolves the backend API base URL with production safety and sanitization.
+ * In development, defaults to http://localhost:8000 if NEXT_PUBLIC_API_URL is unset.
+ * In production, uses NEXT_PUBLIC_API_URL (configured in Render / Vercel environment).
+ */
+export function getApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim() && envUrl !== "undefined" && envUrl !== "null") {
+    // Strip trailing slashes to prevent malformed double slashes like //api/chat
+    return envUrl.trim().replace(/\/+$/, "");
+  }
+
+  // Check if running in browser on production domain with unset NEXT_PUBLIC_API_URL
+  if (typeof window !== "undefined") {
+    const isLocalhost = 
+      window.location.hostname === "localhost" || 
+      window.location.hostname === "127.0.0.1";
+    if (!isLocalhost) {
+      console.warn(
+        `[Paylume API] NEXT_PUBLIC_API_URL is not set on production origin (${window.location.origin}). ` +
+        `Falling back to http://localhost:8000. Please configure NEXT_PUBLIC_API_URL in your hosting dashboard ` +
+        `to point to your deployed Render FastAPI backend.`
+      );
+    }
+  }
+
+  return "http://localhost:8000";
+}
+
+const API_URL = getApiBaseUrl();
 
 const STORAGE_KEY = "paylume_conversations_v1";
 
@@ -262,12 +292,26 @@ export class ApiClient {
       console.warn("Could not retrieve Supabase session token:", e);
     }
 
-    const res = await fetch(`${API_URL}/api/chat`, {
-      method: "POST",
-      headers,
-      body: formData,
-      signal: params.signal
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}/api/chat`, {
+        method: "POST",
+        headers,
+        body: formData,
+        signal: params.signal
+      });
+    } catch (netErr: any) {
+      if (netErr?.name === "AbortError") {
+        throw netErr;
+      }
+      const isLocalhost = API_URL.includes("localhost") || API_URL.includes("127.0.0.1");
+      if (isLocalhost && typeof window !== "undefined" && !window.location.hostname.includes("localhost")) {
+        throw new Error(
+          `Unable to reach backend API at ${API_URL}. The frontend is running in production, but NEXT_PUBLIC_API_URL is still pointing to localhost. Please set NEXT_PUBLIC_API_URL in your hosting service (Render) to your deployed FastAPI backend URL.`
+        );
+      }
+      throw new Error(`Unable to reach backend API at ${API_URL}. Please verify the backend service is running and accessible.`);
+    }
 
     if (!res.ok) {
       if (res.status === 401) {
