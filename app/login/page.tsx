@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -19,7 +19,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, isAuthenticated, isLoading: isAuthChecking } = useAuth();
+  const { signIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,13 +29,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // If already authenticated, redirect to workspace
-  useEffect(() => {
-    if (!isAuthChecking && isAuthenticated) {
-      router.replace("/chat");
-    }
-  }, [isAuthChecking, isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
