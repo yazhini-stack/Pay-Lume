@@ -20,13 +20,13 @@ class Settings:
     EMBEDDING_DIMENSION: int = 1536
 
     # Generation model configuration (Primary + Resilient Fallback Cascade)
+    GENERATION_MODEL: str = os.getenv("GENERATION_MODEL", "models/gemini-3.8-flash")
     GENERATION_MODELS: list = [
-        "models/gemini-3.6-flash",
-        "models/gemini-3-flash-preview",
-        "models/gemini-3.1-flash-lite-preview",
-        "models/gemini-flash-lite-latest"
+        m.strip() for m in os.getenv(
+            "GENERATION_MODELS",
+            "models/gemini-3.8-flash,models/gemini-3.7-flash,models/gemini-3.5-flash-lite,models/gemini-3.6-flash,models/gemini-3-flash-preview,models/gemini-3.1-flash-lite-preview"
+        ).split(",") if m.strip()
     ]
-    GENERATION_MODEL: str = "models/gemini-3.6-flash"
 
     # Upload and network limits
     MAX_IMAGE_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB
