@@ -32,5 +32,6 @@ export type SSEEvent =
   | { type: 'status'; data: { step: RAGStatus; message: string } }
   | { type: 'token'; data: { delta: string; section?: MessageSection } }
   | { type: 'citation'; data: Citation }
+  | { type: 'evidence'; data: string[] }
   | { type: 'done'; data: { messageId: string } }
   | { type: 'error'; data: { message: string; code?: string } };

@@ -13,11 +13,14 @@ interface ChatState {
   streamingContent: string;
   streamingSections: Partial<StructuredAnswer>;
   streamingCitations: Citation[];
+  streamingSecurityEvidence: string[];
   abortController: AbortController | null;
 
   // Layout state
   isEvidencePanelOpen: boolean;
   isSidebarOpen: boolean;
+  isAlreadyPaidModalOpen: boolean;
+  prefilledQuestion: string | null;
 
   // Status & Error state
   uploadProgress: number | null;
@@ -33,11 +36,15 @@ interface ChatState {
   setStreamingStatus: (status: { step: RAGStatus; message: string } | null) => void;
   appendStreamingToken: (delta: string, section?: MessageSection) => void;
   addStreamingCitation: (citation: Citation) => void;
+  setStreamingSecurityEvidence: (evidence: string[]) => void;
   resetStreaming: () => void;
   stopStreaming: () => void;
   setAbortController: (ctrl: AbortController | null) => void;
   toggleEvidencePanel: (open?: boolean) => void;
   toggleSidebar: (open?: boolean) => void;
+  openAlreadyPaidModal: () => void;
+  closeAlreadyPaidModal: () => void;
+  setPrefilledQuestion: (question: string | null) => void;
   setUploadProgress: (pct: number | null) => void;
   setUploadError: (err: string | null) => void;
   setStreamError: (err: string | null) => void;
@@ -55,10 +62,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamingContent: "",
   streamingSections: {},
   streamingCitations: [],
+  streamingSecurityEvidence: [],
   abortController: null,
 
   isEvidencePanelOpen: true,
   isSidebarOpen: true,
+  isAlreadyPaidModalOpen: false,
+  prefilledQuestion: null,
 
   uploadProgress: null,
   uploadError: null,
@@ -98,12 +108,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     };
   }),
 
+  setStreamingSecurityEvidence: (evidence) => set({ streamingSecurityEvidence: evidence }),
+
   resetStreaming: () => set({
     isStreaming: false,
     streamingStatus: null,
     streamingContent: "",
     streamingSections: {},
     streamingCitations: [],
+    streamingSecurityEvidence: [],
     abortController: null,
     streamError: null
   }),
@@ -128,6 +141,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   toggleSidebar: (open) => set((state) => ({
     isSidebarOpen: open !== undefined ? open : !state.isSidebarOpen
   })),
+
+  openAlreadyPaidModal: () => set({ isAlreadyPaidModalOpen: true }),
+  closeAlreadyPaidModal: () => set({ isAlreadyPaidModalOpen: false }),
+  setPrefilledQuestion: (question) => set({ prefilledQuestion: question }),
 
   setUploadProgress: (pct) => set({ uploadProgress: pct }),
   setUploadError: (err) => set({ uploadError: err }),

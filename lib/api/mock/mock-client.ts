@@ -279,7 +279,7 @@ export class MockApiClient {
     if (signal?.aborted) return;
 
     // Generate dynamic response controlled by user's question and evidence
-    const { content, sections, citations } = this.generateQuestionDrivenAnswer(question, evidence);
+    const { content, sections, citations, securityEvidence } = this.generateQuestionDrivenAnswer(question, evidence);
 
     // Stream content if present
     if (content) {
@@ -320,6 +320,13 @@ export class MockApiClient {
       await new Promise((r) => setTimeout(r, 50));
     }
 
+    // Send security evidence if present
+    if (securityEvidence && securityEvidence.length > 0) {
+      if (!signal?.aborted) {
+        onEvent({ type: 'evidence', data: securityEvidence });
+      }
+    }
+
     // Finalize message and save to conversation history
     const messageId = `msg-asst-${Date.now()}`;
     const userMsg: Message = {
@@ -337,6 +344,7 @@ export class MockApiClient {
       content,
       sections,
       citations,
+      securityEvidence: securityEvidence || [],
       createdAt: new Date().toISOString()
     };
 
@@ -356,6 +364,7 @@ export class MockApiClient {
     content?: string;
     sections?: Partial<StructuredAnswer>;
     citations: Citation[];
+    securityEvidence?: string[];
   } {
     const q = question.toLowerCase().trim();
     const evType = evidence?.type || "unknown";

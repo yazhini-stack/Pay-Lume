@@ -85,6 +85,7 @@ async def chat_endpoint(
         "image_mime": image_mime,
         "conversation_history": history_list,
         "evidence_context": "",
+        "security_evidence": [],
         "rag_sources": [],
         "rag_context_text": "",
         "metadata": {
@@ -106,6 +107,7 @@ async def chat_endpoint(
         return ChatResponse(
             answer=result.get("final_answer", "No answer generated."),
             sources=result.get("rag_sources", []),
+            security_evidence=result.get("security_evidence", []),
             metadata=metadata
         )
     except Exception as e:

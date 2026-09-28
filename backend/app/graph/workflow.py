@@ -9,6 +9,8 @@ from app.services.ocr_service import ocr_service
 from app.services.rag_service import rag_service
 from app.services.gemini_service import gemini_service
 
+import re
+
 logger = logging.getLogger(__name__)
 
 class GraphState(TypedDict):
@@ -20,10 +22,98 @@ class GraphState(TypedDict):
     
     # Computed state
     evidence_context: str
+    security_evidence: List[str]
     rag_sources: List[SourceItem]
     rag_context_text: str
     metadata: Dict[str, Any]
     final_answer: str
+
+def extract_security_indicators(
+    qr_result: Dict[str, Any],
+    url_info: Optional[Dict[str, Any]],
+    raw_ocr_text: str,
+    user_question: str
+) -> List[str]:
+    """
+    Extracts concrete, factual security indicators detected during analysis.
+    Only indicators that are directly evidenced in the input are returned.
+    """
+    indicators: List[str] = []
+
+    # 1. URL Analysis Indicators
+    if url_info and url_info.get("requested_url"):
+        hostname = (url_info.get("hostname") or "").lower()
+        scheme = (url_info.get("scheme") or "").lower()
+        has_ssl = url_info.get("has_ssl", False)
+        error = url_info.get("error")
+        redirects = url_info.get("redirect_history") or []
+        tld = (url_info.get("tld") or "").lower()
+
+        if scheme == "http" or not has_ssl:
+            indicators.append("Unencrypted connection (HTTP without SSL/TLS security)")
+        
+        if redirects:
+            first_redirect = redirects[0]
+            indicators.append(f"HTTP redirection chain observed ({first_redirect.get('from')} -> {url_info.get('final_url')})")
+        
+        if error:
+            indicators.append("Destination hostname unreachable or DNS resolution failed")
+            
+        if any(char.isdigit() for char in hostname.replace(".", "")) and all(part.isdigit() for part in hostname.split(".")):
+            indicators.append("Destination is a raw numerical IP address rather than a verified domain name")
+            
+        if tld in ["xyz", "top", "buzz", "work", "loan", "click", "cf", "gq", "ml", "tk"]:
+            indicators.append(f"High-risk or disposable top-level domain (.{tld})")
+
+    # 2. QR Analysis Indicators
+    if qr_result and qr_result.get("detected"):
+        qr_data = qr_result.get("data") or ""
+        lower_qr = qr_data.lower()
+        if "upi://" in lower_qr or "pay?" in lower_qr or "pa=" in lower_qr:
+            indicators.append("Direct instant payment mandate encoded in QR code (UPI intent)")
+        elif qr_result.get("is_url"):
+            indicators.append(f"QR code payload resolves to external web destination ({qr_result.get('url')})")
+        else:
+            indicators.append("Decoded embedded QR barcode payload")
+
+    # 3. Content Analysis Indicators (OCR text + user question)
+    combined_text = f"{raw_ocr_text} {user_question}".lower()
+    
+    # Urgency & Threat language
+    urgency_keywords = [
+        "within 24 hours", "immediate disconnection", "electricity will be disconnected",
+        "power will be cutoff", "power cutoff", "will be disconnected", "disconnected tonight",
+        "urgently", "account will be blocked", "suspended today", "penalty will be charged",
+        "last warning", "act immediately", "dear customer your power", "immediately or your",
+        "session expires in", "payment required within"
+    ]
+    if any(k in combined_text for k in urgency_keywords):
+        indicators.append("Urgent threat or deadline language (e.g. impending utility cutoff or suspension)")
+
+    # Credential solicitation (OTP / PIN / Password / CVV)
+    credential_keywords = [
+        "enter your pin", "enter upi pin", "share otp", "one time password",
+        "cvv number", "atm pin", "net banking password", "upi pin to receive"
+    ]
+    if any(k in combined_text for k in credential_keywords):
+        indicators.append("Solicitation of sensitive security credentials (PIN, OTP, CVV, or password)")
+
+    # Personal email posing as enterprise notification
+    if re.search(r'\b[a-zA-Z0-9._%+-]+@(gmail|yahoo|hotmail|outlook)\.com\b', combined_text):
+        if any(w in combined_text for w in ["bank", "electricity", "support", "official", "department", "customs", "tax", "lottery", "prize", "refund", "bill"]):
+            indicators.append("Personal consumer email address used for official institutional notification")
+
+    # Remote desktop software
+    remote_tools = ["anydesk", "teamviewer", "rustdesk", "quicksupport", "screen share"]
+    if any(t in combined_text for t in remote_tools):
+        indicators.append("Request to install remote desktop or screen-sharing application")
+
+    # Lottery / Refund / Advance-fee lures
+    lure_keywords = ["congratulations you won", "lottery prize", "cashback reward", "unclaimed refund", "scratch card winner", "gst registration fee"]
+    if any(l in combined_text for l in lure_keywords):
+        indicators.append("Unsolicited reward, lottery prize, or upfront fee requirement")
+
+    return indicators
 
 def process_evidence_node(state: GraphState) -> Dict[str, Any]:
     """
@@ -35,11 +125,15 @@ def process_evidence_node(state: GraphState) -> Dict[str, Any]:
         "qr_data": None,
         "url_analyzed": False,
         "url": state.get("url"),
-        "image_analyzed": False
+        "image_analyzed": False,
+        "security_evidence": []
     }
 
     image_bytes = state.get("image_bytes")
     target_url = state.get("url")
+    raw_ocr_text = ""
+    qr_result = {"detected": False}
+    url_info = None
 
     # 1. Process Image if present
     if image_bytes:
@@ -63,8 +157,9 @@ def process_evidence_node(state: GraphState) -> Dict[str, Any]:
                 image_bytes, 
                 mime_type=state.get("image_mime") or "image/jpeg"
             )
-            if ocr_result.get("raw_text"):
-                evidence_parts.append(f"[IMAGE VERBATIM TEXT & VISUAL ELEMENTS]:\n{ocr_result.get('raw_text')}")
+            raw_ocr_text = ocr_result.get("raw_text", "")
+            if raw_ocr_text:
+                evidence_parts.append(f"[IMAGE VERBATIM TEXT & VISUAL ELEMENTS]:\n{raw_ocr_text}")
 
     # 2. Process URL if present
     if target_url:
@@ -92,8 +187,18 @@ def process_evidence_node(state: GraphState) -> Dict[str, Any]:
 
         evidence_parts.append("\n".join(url_summary))
 
+    # 3. Detect concrete security indicators
+    indicators = extract_security_indicators(
+        qr_result=qr_result,
+        url_info=url_info,
+        raw_ocr_text=raw_ocr_text,
+        user_question=state.get("question", "")
+    )
+    metadata["security_evidence"] = indicators
+
     return {
         "evidence_context": "\n\n".join(evidence_parts),
+        "security_evidence": indicators,
         "metadata": metadata,
         "url": target_url
     }

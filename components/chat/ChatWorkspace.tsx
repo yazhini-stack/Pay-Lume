@@ -9,6 +9,7 @@ import { ConversationSidebar } from "./ConversationSidebar";
 import { MessageThread } from "./MessageThread";
 import { Composer } from "./Composer";
 import { EvidencePanel } from "@/components/evidence/EvidencePanel";
+import { AlreadyPaidModal } from "./AlreadyPaidModal";
 import { 
   Shield, 
   PanelRightClose, 
@@ -45,7 +46,11 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
     setStreamError,
     isEvidencePanelOpen,
     toggleEvidencePanel,
-    toggleSidebar
+    toggleSidebar,
+    setStreamingSecurityEvidence,
+    isAlreadyPaidModalOpen,
+    closeAlreadyPaidModal,
+    setPrefilledQuestion
   } = useChatStore();
 
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
@@ -167,6 +172,8 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
             appendStreamingToken(event.data.delta, event.data.section);
           } else if (event.type === "citation") {
             addStreamingCitation(event.data);
+          } else if (event.type === "evidence") {
+            setStreamingSecurityEvidence(event.data);
           } else if (event.type === "done") {
             // Stream complete: refetch conversation to sync complete history
             queryClient.invalidateQueries({ queryKey: ["conversation", convId] });
@@ -266,6 +273,19 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
 
         {/* 3. RIGHT REGION: Persistent Evidence Panel */}
         <EvidencePanel />
+
+        {/* 4. Post-Payment Emergency Assistance Modal */}
+        <AlreadyPaidModal
+          isOpen={isAlreadyPaidModalOpen}
+          onClose={() => closeAlreadyPaidModal()}
+          onSelectFlow={(question, autoSend) => {
+            if (autoSend) {
+              handleSendMessage(question);
+            } else {
+              setPrefilledQuestion(question);
+            }
+          }}
+        />
       </div>
     </AuthGuard>
   );

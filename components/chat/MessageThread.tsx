@@ -42,6 +42,7 @@ export function MessageThread({
     streamingContent,
     streamingSections,
     streamingCitations,
+    streamingSecurityEvidence,
     isOffline,
     isRateLimited,
     streamError,
@@ -193,6 +194,7 @@ export function MessageThread({
                       content: streamingContent,
                       sections: streamingSections,
                       citations: streamingCitations,
+                      securityEvidence: streamingSecurityEvidence,
                       createdAt: new Date().toISOString()
                     }}
                   />

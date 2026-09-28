@@ -11,6 +11,7 @@ class SourceItem(BaseModel):
 class ChatResponse(BaseModel):
     answer: str = Field(..., description="Direct answer to the user's question, informed by evidence and RAG knowledge")
     sources: List[SourceItem] = Field(default_factory=list, description="Authoritative cybersecurity citations utilized")
+    security_evidence: List[str] = Field(default_factory=list, description="Concrete security indicators detected during analysis")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata regarding evidence processing (QR, URL, OCR)")
 
 class HealthResponse(BaseModel):

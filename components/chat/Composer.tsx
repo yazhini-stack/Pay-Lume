@@ -19,7 +19,10 @@ import {
   Sparkles, 
   AlertTriangle, 
   RotateCw,
-  HelpCircle
+  HelpCircle,
+  Mic,
+  Square,
+  AlertOctagon
 } from "lucide-react";
 import { EvidenceType, EvidencePayload } from "@/types/evidence";
 import { cn } from "@/lib/utils";
@@ -33,9 +36,12 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
   const [inputText, setInputText] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [detectedPastedText, setDetectedPastedText] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const {
     activeEvidence,
@@ -44,10 +50,109 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
     setUploadProgress,
     uploadError,
     setUploadError,
-    isStreaming
+    isStreaming,
+    openAlreadyPaidModal,
+    prefilledQuestion,
+    setPrefilledQuestion
   } = useChatStore();
 
   const { checkAndProceedWithUpload } = usePrivacyGuard();
+
+  // Sync prefilled question if triggered from Already Paid flow
+  useEffect(() => {
+    if (prefilledQuestion) {
+      setInputText(prefilledQuestion);
+      setPrefilledQuestion(null);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 50);
+    }
+  }, [prefilledQuestion, setPrefilledQuestion]);
+
+  // Cleanup speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+    };
+  }, []);
+
+  // Web Speech API handler
+  const startListening = () => {
+    setVoiceError(null);
+    const SpeechRecognition = 
+      typeof window !== "undefined" 
+        ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+        : null;
+
+    if (!SpeechRecognition) {
+      setVoiceError("Voice input is not supported by your browser. Please use Chrome, Edge, or Safari.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = typeof navigator !== "undefined" ? (navigator.language || "en-US") : "en-US";
+
+      const baseText = inputText.trim();
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setVoiceError(null);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript) {
+          const combined = baseText ? `${baseText} ${transcript}` : transcript;
+          setInputText(combined);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn("Speech recognition error:", event.error);
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setVoiceError("Microphone access was denied. Please allow microphone permissions in your browser.");
+        } else if (event.error === "network") {
+          setVoiceError("Network connectivity issue with speech recognition service.");
+        } else if (event.error !== "no-speech") {
+          setVoiceError(`Voice input error: ${event.error}`);
+        }
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err: any) {
+      console.warn("Could not start speech recognition:", err);
+      setIsListening(false);
+      setVoiceError("Could not start microphone. Please check your browser permissions.");
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+  };
 
   // Resize textarea automatically
   useEffect(() => {
@@ -223,6 +328,23 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
         </div>
       )}
 
+      {/* Voice Recognition Error Banner */}
+      {voiceError && (
+        <div className="p-3 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-200 text-xs flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0" />
+            <span>{voiceError}</span>
+          </div>
+          <button
+            onClick={() => setVoiceError(null)}
+            className="p-1 text-zinc-400 hover:text-white"
+            aria-label="Dismiss voice error"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Long Text Paste Modal Prompt */}
       {detectedPastedText && (
         <div className="p-4 rounded-2xl bg-[#0e1e14] border border-emerald-500/30 text-xs space-y-3 animate-in fade-in shadow-xl">
@@ -317,8 +439,8 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
           </div>
         )}
 
-        {/* Text Area */}
-        <div className="relative flex items-center">
+        {/* Text Area and Microphone Button */}
+        <div className="relative flex items-center gap-2">
           <textarea
             ref={textareaRef}
             value={inputText}
@@ -334,11 +456,37 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
             }
             className="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none max-h-36 py-2 px-2"
           />
+
+          {/* Voice Input Button: Normal 🎤 vs Recording 🔴 Listening... */}
+          {isListening ? (
+            <button
+              type="button"
+              onClick={stopListening}
+              aria-label="Stop voice input recording"
+              title="Stop listening (Click to finish)"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 text-red-200 hover:bg-red-900 text-xs font-semibold shrink-0 transition-all animate-pulse"
+            >
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+              <span>Listening...</span>
+              <Square className="h-3 w-3 fill-current ml-0.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={startListening}
+              disabled={disabled || isStreaming}
+              aria-label="Start voice input"
+              title="Voice input: Speak your question"
+              className="p-2 rounded-2xl text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/60 border border-transparent hover:border-emerald-500/30 transition-all shrink-0"
+            >
+              <Mic className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
-        {/* Bottom Toolbar: Attach Button, Privacy Reminder, and Send */}
+        {/* Bottom Toolbar: Attach Button, Already Paid Button, Privacy Reminder, and Send */}
         <div className="mt-2 pt-2 border-t border-emerald-500/10 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -358,8 +506,20 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
               <span>Attach Evidence</span>
             </button>
 
+            {/* 🚨 I Already Paid emergency button */}
+            <button
+              type="button"
+              onClick={() => openAlreadyPaidModal()}
+              disabled={disabled || isStreaming}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-950/40 hover:bg-red-900/60 border border-red-500/25 hover:border-red-500/40 text-red-300 text-xs font-medium transition-colors"
+              title="Emergency assistance if payment was already made"
+            >
+              <AlertOctagon className="h-3.5 w-3.5 text-red-400" />
+              <span>Already Paid? Get Help</span>
+            </button>
+
             {/* Persistent compact privacy reminder */}
-            <div className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-300 cursor-help transition-colors hidden md:flex">
+            <div className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-300 cursor-help transition-colors hidden lg:flex">
               <ShieldAlert className="h-3 w-3 text-amber-400/80 flex-shrink-0" />
               <span>Never share OTPs, CVVs, or full PINs</span>
             </div>

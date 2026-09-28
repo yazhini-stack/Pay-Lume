@@ -70,26 +70,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 1. Fetch initial session
     const initializeAuth = async () => {
+      console.log("AUTH INIT: isSupabaseConfigured =", isSupabaseConfigured);
+
       if (!isSupabaseConfigured) {
         if (isMounted) {
+          console.log("AUTH INIT: setting isLoading false");
           setIsLoading(false);
         }
         return;
       }
 
       try {
+        console.log("AUTH INIT: starting getSession");
         const { data, error } = await supabase.auth.getSession();
         if (error) {
-          console.warn("Error fetching Supabase session:", error.message);
+          console.warn("AUTH INIT: getSession error", error.message);
+        } else {
+          console.log("AUTH INIT: getSession resolved", data?.session ? "with session" : "no session");
         }
         if (isMounted) {
-          setSession(data.session);
-          setSupabaseUser(data.session?.user || null);
+          setSession(data?.session || null);
+          setSupabaseUser(data?.session?.user || null);
+          console.log("AUTH INIT: setting isLoading false");
           setIsLoading(false);
         }
       } catch (err) {
-        console.error("Failed to initialize auth session:", err);
+        console.error("AUTH INIT: getSession threw exception", err);
         if (isMounted) {
+          console.log("AUTH INIT: setting isLoading false");
           setIsLoading(false);
         }
       }

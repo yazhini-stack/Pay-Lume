@@ -10,6 +10,7 @@ export interface Citation {
   source: string;
   url: string;
   snippet: string;
+  category?: string;
 }
 
 export interface StructuredAnswer {
@@ -25,6 +26,7 @@ export interface Message {
   content?: string;
   sections?: Partial<StructuredAnswer>;
   citations?: Citation[];
+  securityEvidence?: string[];
   createdAt: string;
   status?: RAGStatus;
 }

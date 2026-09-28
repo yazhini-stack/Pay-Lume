@@ -102,6 +102,10 @@ export const MOCK_PRELOADED_CONVERSATIONS: Conversation[] = [
           MOCK_CITATIONS.ftc_qr,
           MOCK_CITATIONS.cert_vpa
         ],
+        securityEvidence: [
+          "Direct instant payment mandate encoded in QR code (UPI intent)",
+          "Consumer bank VPA (@okaxis) with custom municipal display name"
+        ],
         createdAt: "2026-09-20T08:16:15Z"
       }
     ],
@@ -151,6 +155,11 @@ export const MOCK_PRELOADED_CONVERSATIONS: Conversation[] = [
         citations: [
           MOCK_CITATIONS.owasp_domain
         ],
+        securityEvidence: [
+          "High-risk or disposable top-level domain (.xyz)",
+          "Lookalike domain pairing brand name with authentication terms",
+          "Automated TLS certificate without corporate identity verification"
+        ],
         createdAt: "2026-09-19T14:23:25Z"
       }
     ],
@@ -198,6 +207,10 @@ export const MOCK_PRELOADED_CONVERSATIONS: Conversation[] = [
         },
         citations: [
           MOCK_CITATIONS.ftc_utility
+        ],
+        securityEvidence: [
+          "Urgent threat or deadline language (immediate night-time power cutoff)",
+          "Personal mobile phone number used for official utility notification"
         ],
         createdAt: "2026-09-18T19:06:20Z"
       }

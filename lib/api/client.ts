@@ -23,6 +23,7 @@ export interface ChatApiResponse {
     url?: string;
     snippet?: string;
   }>;
+  security_evidence?: string[];
   metadata: Record<string, any>;
 }
 
@@ -330,10 +331,20 @@ export class ApiClient {
             id: idx + 1,
             title: s.title,
             source: s.source,
+            category: s.category,
             url: s.url || "",
             snippet: s.snippet || ""
           }
         });
+      });
+    }
+
+    // Stream detected security evidence indicators
+    const detectedEvidence = res.security_evidence || res.metadata?.security_evidence || [];
+    if (detectedEvidence.length > 0) {
+      onEvent({
+        type: "evidence",
+        data: detectedEvidence
       });
     }
 
@@ -364,9 +375,11 @@ export class ApiClient {
           id: idx + 1,
           title: s.title,
           source: s.source,
+          category: s.category,
           url: s.url || "",
           snippet: s.snippet || ""
         })),
+        securityEvidence: detectedEvidence,
         createdAt: new Date().toISOString()
       }
     ];

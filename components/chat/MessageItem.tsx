@@ -14,11 +14,16 @@ import {
   ChevronDown, 
   ChevronUp,
   Bookmark,
-  Share2
+  Share2,
+  Search,
+  AlertTriangle,
+  AlertOctagon,
+  BookOpen
 } from "lucide-react";
 import { formatTimestamp, cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useChatStore } from "@/lib/stores/useChatStore";
 
 interface MessageItemProps {
   message: Message;
@@ -26,8 +31,9 @@ interface MessageItemProps {
 
 export function MessageItem({ message }: MessageItemProps) {
   const [copied, setCopied] = useState(false);
-  const [isCitationsOpen, setIsCitationsOpen] = useState(false);
+  const [isCitationsOpen, setIsCitationsOpen] = useState(true);
   const [activePopoverCitation, setActivePopoverCitation] = useState<Citation | null>(null);
+  const { openAlreadyPaidModal } = useChatStore();
 
   const isUser = message.role === "user";
 
@@ -204,61 +210,106 @@ export function MessageItem({ message }: MessageItemProps) {
         </div>
       )}
 
-      {/* COLLAPSIBLE CITATIONS DRAWER */}
-      {citations.length > 0 && (
-        <div className="rounded-2xl bg-[#071109]/80 border border-emerald-500/15 overflow-hidden">
-          <button
-            onClick={() => setIsCitationsOpen(!isCitationsOpen)}
-            className="w-full flex items-center justify-between p-3 text-left hover:bg-emerald-950/30 transition-colors text-xs text-zinc-300"
-          >
-            <div className="flex items-center gap-2">
-              <Bookmark className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="font-medium text-emerald-200">
-                Authoritative Security Citations ({citations.length})
-              </span>
-              <span className="text-[11px] text-zinc-400 hidden sm:inline">
-                CISA, FTC, OWASP, CERT-In
-              </span>
-            </div>
-            <div className="text-emerald-400">
-              {isCitationsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </div>
-          </button>
+      {/* 🔍 SECURITY EVIDENCE SECTION */}
+      {message.securityEvidence !== undefined && (
+        <div className="p-4 rounded-3xl bg-[#09150d]/90 border border-emerald-500/20 shadow-md space-y-2.5">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-emerald-400" />
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
+              🔍 Security Evidence
+            </h4>
+          </div>
 
-          {isCitationsOpen && (
-            <div className="p-3 pt-0 space-y-2 border-t border-emerald-500/10 text-xs animate-in slide-in-from-top-1 duration-150">
-              {citations.map((c) => (
-                <div key={c.id} className="p-3 rounded-xl bg-black/40 border border-emerald-500/10 space-y-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/20 font-bold">
-                        [{c.id}]
-                      </span>
-                      <span className="font-semibold text-emerald-100">{c.title}</span>
-                    </div>
-                    {c.url && (
-                      <a
-                        href={c.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-400 hover:text-emerald-300 p-1 flex-shrink-0"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    )}
-                  </div>
-                  <div className="text-[11px] font-medium text-emerald-400/80">
-                    Source: {c.source}
-                  </div>
-                  <p className="text-[11px] text-zinc-300 leading-relaxed italic">
-                    "{c.snippet}"
-                  </p>
-                </div>
+          {message.securityEvidence.length > 0 ? (
+            <ul className="space-y-1.5 pl-1">
+              {message.securityEvidence.map((indicator, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-xs text-amber-200 font-medium">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <span>{indicator}</span>
+                </li>
               ))}
-            </div>
+            </ul>
+          ) : (
+            <p className="text-xs text-emerald-300/80 italic flex items-center gap-1.5 pl-1">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span>No specific suspicious indicators were detected from the provided content.</span>
+            </p>
           )}
         </div>
       )}
+
+      {/* 📚 TRUSTED RESOURCES (Actual RAG Sources from pgvector) */}
+      {citations.length > 0 && (
+        <div className="rounded-3xl bg-[#071109]/90 border border-emerald-500/20 overflow-hidden shadow-md">
+          <div className="p-3.5 flex items-center justify-between border-b border-emerald-500/10">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-emerald-400" />
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
+                📚 Trusted Resources
+              </h4>
+            </div>
+            <span className="text-[10px] text-zinc-400 font-mono">
+              {citations.length} Verified {citations.length === 1 ? 'Advisory' : 'Advisories'}
+            </span>
+          </div>
+
+          <div className="p-3 space-y-2 text-xs">
+            {citations.map((c) => (
+              <div key={c.id} className="p-3 rounded-2xl bg-black/40 border border-emerald-500/10 space-y-1.5 hover:border-emerald-500/25 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30">
+                      {c.source}
+                    </span>
+                    {c.category && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-700/50">
+                        {c.category}
+                      </span>
+                    )}
+                    <span className="font-semibold text-emerald-100">{c.title}</span>
+                  </div>
+                  {c.url && (
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-400 hover:text-emerald-300 p-1 flex-shrink-0"
+                      title={`Official advisory link for ${c.title}`}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+                {c.snippet && (
+                  <p className="text-[11px] text-zinc-300 leading-relaxed italic pl-1">
+                    "{c.snippet}"
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 🚨 ALREADY PAID? ASSISTANCE ACTION CARD */}
+      <div className="p-3.5 rounded-3xl bg-gradient-to-r from-red-950/40 via-[#130b0b] to-[#08120b] border border-red-500/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-xl bg-red-950 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0">
+            <AlertOctagon className="h-4 w-4" />
+          </div>
+          <div>
+            <span className="text-xs font-semibold text-white block">🚨 Already Paid?</span>
+            <span className="text-[11px] text-zinc-400">Transferred money or shared account details? Get immediate guidance.</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => openAlreadyPaidModal()}
+          className="px-4 py-1.5 rounded-full bg-gradient-to-r from-red-700 to-rose-700 hover:from-red-600 hover:to-rose-600 border border-red-500/40 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shrink-0 self-end sm:self-auto"
+        >
+          <span>Get Help</span>
+        </button>
+      </div>
 
       {/* Source Popover Modal when clicking superscript [N] */}
       {activePopoverCitation && (
