@@ -1,3 +1,4 @@
+import time
 import logging
 from typing import List, Dict, Any, Optional
 from supabase import create_client, Client
@@ -12,6 +13,8 @@ class RAGService:
         self.url = settings.SUPABASE_URL
         self.key = settings.SUPABASE_SERVICE_ROLE_KEY
         self._supabase: Optional[Client] = None
+        self.last_embedding_ms: float = 0.0
+        self.last_rag_ms: float = 0.0
 
     def _get_supabase(self) -> Optional[Client]:
         if not self._supabase:
@@ -28,16 +31,19 @@ class RAGService:
     def retrieve_relevant_documents(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """
         Generates a 1536-dimensional embedding using Gemini Embedding 2,
-        then calls the Supabase match_documents RPC to find the top_k most similar chunks.
+        then calls the Supabase match_documents RPC directly with verified parameters to find the top_k most similar chunks.
         """
         clean_query = (query or "").strip()
         if not clean_query:
             return []
 
         # Generate query vector
+        t0_emb = time.perf_counter()
         try:
             query_embedding = embedding_service.generate_embedding(clean_query)
+            self.last_embedding_ms = (time.perf_counter() - t0_emb) * 1000
         except Exception as e:
+            self.last_embedding_ms = (time.perf_counter() - t0_emb) * 1000
             logger.error(f"Failed to generate query embedding for RAG: {e}")
             return []
 
@@ -46,27 +52,31 @@ class RAGService:
             logger.warning("Skipping vector search because Supabase client is not available.")
             return []
 
-        # Attempt RPC call to match_documents
-        params_attempts = [
-            {"query_embedding": query_embedding, "match_count": top_k, "filter": {}},
-            {"query_embedding": query_embedding, "match_threshold": 0.25, "match_count": top_k},
-            {"query_embedding": query_embedding, "match_count": top_k}
-        ]
-
-        for params in params_attempts:
+        # Directly invoke the verified working RPC signature: {"query_embedding": query_embedding, "match_count": top_k}
+        t0_rag = time.perf_counter()
+        params = {"query_embedding": query_embedding, "match_count": top_k}
+        try:
+            response = client.rpc("match_documents", params).execute()
+            self.last_rag_ms = (time.perf_counter() - t0_rag) * 1000
+            if response.data:
+                logger.info(f"Retrieved {len(response.data)} documents from Supabase match_documents")
+                return response.data
+            elif response.data == []:
+                logger.info("Supabase match_documents returned 0 matches.")
+                return []
+        except Exception as e:
+            logger.warning(f"Direct RPC match_documents call failed: {e}. Trying safe fallback...")
             try:
-                response = client.rpc("match_documents", params).execute()
+                fallback_params = {"query_embedding": query_embedding, "match_threshold": 0.25, "match_count": top_k}
+                response = client.rpc("match_documents", fallback_params).execute()
+                self.last_rag_ms = (time.perf_counter() - t0_rag) * 1000
                 if response.data:
-                    logger.info(f"Retrieved {len(response.data)} documents from Supabase match_documents")
                     return response.data
-                elif response.data == []:
-                    logger.info("Supabase match_documents returned 0 matches.")
-                    return []
-            except Exception as e:
-                logger.debug(f"RPC attempt with params {list(params.keys())} failed: {e}")
-                continue
+            except Exception as fb_err:
+                logger.debug(f"Fallback RPC call also failed: {fb_err}")
+            self.last_rag_ms = (time.perf_counter() - t0_rag) * 1000
 
-        logger.warning("Could not complete RPC match_documents call with any known signature.")
+        logger.warning("Could not complete RPC match_documents call.")
         return []
 
     def format_sources_and_context(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:

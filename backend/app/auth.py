@@ -1,3 +1,4 @@
+import time
 import logging
 from typing import Optional, Dict, Any
 from fastapi import Depends, HTTPException, status
@@ -22,6 +23,7 @@ class AuthenticatedUser(BaseModel):
     email: Optional[str] = Field(None, description="User email address")
     role: Optional[str] = Field("authenticated", description="User role in Supabase")
     user_metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata such as full_name")
+    auth_duration_ms: Optional[float] = Field(None, description="Time taken to verify JWT in milliseconds")
 
 
 class BackendAuthService:
@@ -61,9 +63,11 @@ class BackendAuthService:
             )
 
         client = self.get_client()
+        t0 = time.perf_counter()
         try:
             # Query Supabase Auth service with token
             user_response = client.auth.get_user(token)
+            auth_ms = (time.perf_counter() - t0) * 1000
             if not user_response or not user_response.user:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -76,7 +80,8 @@ class BackendAuthService:
                 id=str(user.id),
                 email=user.email,
                 role=getattr(user, "role", "authenticated") or "authenticated",
-                user_metadata=getattr(user, "user_metadata", {}) or {}
+                user_metadata=getattr(user, "user_metadata", {}) or {},
+                auth_duration_ms=auth_ms
             )
 
         except AuthApiError as e:

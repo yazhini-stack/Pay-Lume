@@ -215,6 +215,8 @@ def retrieve_rag_node(state: GraphState) -> Dict[str, Any]:
     
     metadata = state.get("metadata", {})
     metadata["sources_count"] = len(formatted["sources"])
+    metadata["perf_embedding_ms"] = getattr(rag_service, "last_embedding_ms", 0.0)
+    metadata["perf_rag_ms"] = getattr(rag_service, "last_rag_ms", 0.0)
 
     return {
         "rag_sources": formatted["sources"],
@@ -224,8 +226,9 @@ def retrieve_rag_node(state: GraphState) -> Dict[str, Any]:
 
 def generate_answer_node(state: GraphState) -> Dict[str, Any]:
     """
-    Generates the synthesized, question-driven answer using Gemini 3.6 Flash.
+    Generates the synthesized, question-driven answer using Gemini.
     """
+    import time
     question = state.get("question", "")
     evidence_context = state.get("evidence_context", "")
     rag_context = state.get("rag_context_text", "")
@@ -233,6 +236,7 @@ def generate_answer_node(state: GraphState) -> Dict[str, Any]:
     image_bytes = state.get("image_bytes")
     image_mime = state.get("image_mime") or "image/jpeg"
 
+    t0_gen = time.perf_counter()
     answer = gemini_service.generate_answer(
         question=question,
         evidence_context=evidence_context,
@@ -241,9 +245,14 @@ def generate_answer_node(state: GraphState) -> Dict[str, Any]:
         image_bytes=image_bytes,
         image_mime=image_mime
     )
+    t1_gen = time.perf_counter()
+
+    metadata = state.get("metadata", {})
+    metadata["perf_gemini_ms"] = (t1_gen - t0_gen) * 1000
 
     return {
-        "final_answer": answer
+        "final_answer": answer,
+        "metadata": metadata
     }
 
 # Build LangGraph workflow

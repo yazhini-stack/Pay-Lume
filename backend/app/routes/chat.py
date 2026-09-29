@@ -1,3 +1,4 @@
+import time
 import json
 import logging
 from typing import Optional, List, Dict, Union
@@ -23,6 +24,7 @@ async def chat_endpoint(
     Main multimodal conversational cybersecurity analysis endpoint.
     Accepts question along with any combination of uploaded image, URL, and prior message context.
     """
+    req_start = time.perf_counter()
     if not question or not question.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -103,6 +105,15 @@ async def chat_endpoint(
         metadata["user_id"] = current_user.id
         if current_user.email:
             metadata["user_email"] = current_user.email
+
+        # Performance summary logging
+        req_end = time.perf_counter()
+        auth_ms = current_user.auth_duration_ms or 0.0
+        embed_ms = metadata.get("perf_embedding_ms", 0.0)
+        rag_ms = metadata.get("perf_rag_ms", 0.0)
+        gemini_ms = metadata.get("perf_gemini_ms", 0.0)
+        total_ms = (req_end - req_start) * 1000 + auth_ms
+        logger.info(f"[PERF] auth={auth_ms:.0f}ms embedding={embed_ms:.0f}ms rag={rag_ms:.0f}ms gemini={gemini_ms:.0f}ms total={total_ms:.0f}ms")
 
         return ChatResponse(
             answer=result.get("final_answer", "No answer generated."),

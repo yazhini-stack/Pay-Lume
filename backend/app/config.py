@@ -20,11 +20,11 @@ class Settings:
     EMBEDDING_DIMENSION: int = 1536
 
     # Generation model configuration (Primary + Resilient Fallback Cascade)
-    GENERATION_MODEL: str = os.getenv("GENERATION_MODEL", "models/gemini-3.8-flash")
+    GENERATION_MODEL: str = os.getenv("GENERATION_MODEL", "models/gemini-3.5-flash-lite")
     GENERATION_MODELS: list = [
         m.strip() for m in os.getenv(
             "GENERATION_MODELS",
-            "models/gemini-3.8-flash,models/gemini-3.7-flash,models/gemini-3.5-flash-lite,models/gemini-3.6-flash,models/gemini-3-flash-preview,models/gemini-3.1-flash-lite-preview"
+            "models/gemini-3.5-flash-lite,models/gemini-3.1-flash-lite-preview,models/gemini-3-flash-preview"
         ).split(",") if m.strip()
     ]
 

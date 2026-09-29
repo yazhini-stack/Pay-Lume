@@ -90,7 +90,6 @@ class GeminiService:
             except Exception as e:
                 err_str = str(e)
                 logger.warning(f"Model {model_name} failed ({err_str[:90]}). Falling back to next available model...")
-                time.sleep(0.5)
 
         return "I was unable to complete the analysis due to upstream AI service congestion. Please try again in a few moments."
 
