@@ -116,8 +116,13 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
 
   // Handle loading sample evidence from empty state
   const handleSelectSample = (type: "qr" | "url" | "message" | "screenshot") => {
-    const sample = MOCK_PRELOADED_CONVERSATIONS.find((c) => c.evidence?.type === type);
+    const sample = apiClient.loadSampleConversation(type);
     if (sample) {
+      setActiveConversationId(sample.id);
+      setActiveEvidence(sample.evidence, sample.evidence?.extractedContext);
+      setCurrentMessages(sample.messages || []);
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["conversation", sample.id] });
       router.push(`/chat/${sample.id}`);
     }
   };

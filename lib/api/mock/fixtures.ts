@@ -36,6 +36,13 @@ export const MOCK_CITATIONS: Record<string, Citation> = {
     source: "Federal Trade Commission (FTC)",
     url: "https://consumer.ftc.gov/consumer-alerts/2022/07/utility-scams-turn-heat",
     snippet: "Legitimate utilities will never demand immediate payment through third-party apps, gift cards, or phone transfers within an arbitrary same-day deadline without prior mail notices."
+  },
+  fbi_escrow: {
+    id: 6,
+    title: "FBI IC3 Alert: Advance-Fee & Fraudulent Escrow Schemes",
+    source: "Federal Bureau of Investigation (IC3)",
+    url: "https://www.ic3.gov",
+    snippet: "Fraudulent buyers or sellers create counterfeit escrow receipts or spoofed payment clearance notifications demanding advance fees or insurance deposits before funds are unlocked."
   }
 };
 
@@ -217,6 +224,60 @@ export const MOCK_PRELOADED_CONVERSATIONS: Conversation[] = [
     ],
     createdAt: "2026-09-18T19:05:00Z",
     updatedAt: "2026-09-18T19:06:20Z"
+  },
+  {
+    id: "conv-escrow-receipt",
+    title: "Forged escrow payment release receipt",
+    evidence: {
+      id: "ev-escrow-1",
+      type: "screenshot",
+      title: "escrow_transfer_hold_notice.png",
+      previewUrl: "/mock/escrow-receipt.png",
+      extractedContext: {
+        ocrText: "PAYMENT TRANSFER CONFIRMATION: Ref #TXN984210. Status: In Escrow Hold. Beneficiary: Global Escrow Release Desk. Notice: Advance clearance fee of $250.00 required before fund release.",
+        detectedUrls: [],
+        paymentFields: {
+          payee: "Global Escrow Release Desk",
+          amount: "4,850.00",
+          currency: "USD",
+          accountOrVpa: "ESCROW-98421",
+          urgencyPhrases: ["funds on temporary hold", "release fee required within 24h", "advance clearance fee"]
+        },
+        extractionConfidence: 0.96,
+        timestamp: "2026-09-17T11:30:00Z"
+      },
+      createdAt: "2026-09-17T11:30:00Z"
+    },
+    messages: [
+      {
+        id: "msg-user-4",
+        conversationId: "conv-escrow-receipt",
+        role: "user",
+        content: "Does this payment receipt look authentic, and should I pay the clearance fee to release the money?",
+        createdAt: "2026-09-17T11:31:00Z"
+      },
+      {
+        id: "msg-asst-4",
+        conversationId: "conv-escrow-receipt",
+        role: "assistant",
+        sections: {
+          observed: "The receipt displays a payment status of 'In Escrow Hold' for $4,850.00 from 'Global Escrow Release Desk' (Ref #TXN984210). It explicitly states that an upfront 'advance clearance fee' of $250.00 is required before the held funds will be released to your account.",
+          interpretation: "Legitimate commercial escrow services and banking payment rails never require the recipient to pay an upfront personal fee or insurance deposit to release incoming funds [6]. The requirement to pay upfront money to release a larger sum is the hallmark mechanism of an advance-fee fraud scheme. The document also displays typographical misalignments and unverified corporate entity details.",
+          actions: "1. Do not transfer any advance fee, release deposit, or gift cards to this entity.\n2. Do not dispatch any merchandise, vehicles, or services to the buyer based on this document.\n3. Log directly into your official banking institution portal to verify actual settled funds — never trust a buyer-provided screenshot [2].\n4. Cease contact with the sender and flag the transaction to the trading platform fraud unit."
+        },
+        citations: [
+          MOCK_CITATIONS.ftc_qr,
+          MOCK_CITATIONS.fbi_escrow
+        ],
+        securityEvidence: [
+          "Advance-fee payment release requirement (advance fee scam pattern)",
+          "Unverified third-party escrow beneficiary name"
+        ],
+        createdAt: "2026-09-17T11:31:20Z"
+      }
+    ],
+    createdAt: "2026-09-17T11:30:00Z",
+    updatedAt: "2026-09-17T11:31:20Z"
   }
 ];
 

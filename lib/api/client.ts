@@ -1,4 +1,5 @@
 import { mockApiClient } from "./mock/mock-client";
+import { MOCK_PRELOADED_CONVERSATIONS } from "./mock/fixtures";
 import { 
   EvidenceUploadResponse, 
   CreateConversationRequest, 
@@ -209,7 +210,32 @@ export class ApiClient {
       return mockApiClient.getConversation(id);
     }
     const convs = this.getLocalConversations();
-    return convs.find((c) => c.id === id) || null;
+    const found = convs.find((c) => c.id === id);
+    if (found) return found;
+
+    // Fallback: If requesting a verified preloaded test case, seed it to local store
+    const sample = MOCK_PRELOADED_CONVERSATIONS.find((c) => c.id === id);
+    if (sample) {
+      const cloned: Conversation = JSON.parse(JSON.stringify(sample));
+      convs.unshift(cloned);
+      this.saveLocalConversations(convs);
+      return cloned;
+    }
+
+    return null;
+  }
+
+  loadSampleConversation(type: "qr" | "url" | "message" | "screenshot"): Conversation | null {
+    const sample = MOCK_PRELOADED_CONVERSATIONS.find((c) => c.evidence?.type === type);
+    if (!sample) return null;
+    const convs = this.getLocalConversations();
+    const existing = convs.find((c) => c.id === sample.id);
+    if (existing) return existing;
+
+    const cloned: Conversation = JSON.parse(JSON.stringify(sample));
+    convs.unshift(cloned);
+    this.saveLocalConversations(convs);
+    return cloned;
   }
 
   async createConversation(req: CreateConversationRequest): Promise<CreateConversationResponse> {
@@ -345,7 +371,19 @@ export class ApiClient {
       content: m.content || ""
     }));
 
-    const targetUrl = conv?.evidence?.url;
+    // Forward attached text evidence to backend if present
+    let promptQuestion = question;
+    if (conv?.evidence?.rawText && !question.includes(conv.evidence.rawText.slice(0, 30))) {
+      promptQuestion = `[Attached Message Evidence]:\n${conv.evidence.rawText}\n\n[User Question]:\n${question}`;
+    }
+
+    let targetUrl = conv?.evidence?.url;
+    if (!targetUrl) {
+      const urlMatch = (conv?.evidence?.rawText || question).match(/https?:\/\/[^\s<>"\')]+/i);
+      if (urlMatch) {
+        targetUrl = urlMatch[0];
+      }
+    }
     
     // Safely resolve image: either in-memory Blob/File or restored from data: URL
     let targetImage: Blob | undefined = undefined;
@@ -359,7 +397,7 @@ export class ApiClient {
     }
 
     const res = await this.chat({
-      question,
+      question: promptQuestion,
       url: targetUrl,
       image: targetImage,
       conversationHistory: history,
@@ -385,12 +423,10 @@ export class ApiClient {
 
     // Stream detected security evidence indicators
     const detectedEvidence = res.security_evidence || res.metadata?.security_evidence || [];
-    if (detectedEvidence.length > 0) {
-      onEvent({
-        type: "evidence",
-        data: detectedEvidence
-      });
-    }
+    onEvent({
+      type: "evidence",
+      data: detectedEvidence
+    });
 
     // Stream tokens of the direct answer
     onEvent({

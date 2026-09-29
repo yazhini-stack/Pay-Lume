@@ -37,6 +37,7 @@ def extract_security_indicators(
     """
     Extracts concrete, factual security indicators detected during analysis.
     Only indicators that are directly evidenced in the input are returned.
+    Works dynamically for arbitrary user input, screenshots, URLs, and text messages.
     """
     indicators: List[str] = []
 
@@ -65,6 +66,11 @@ def extract_security_indicators(
         if tld in ["xyz", "top", "buzz", "work", "loan", "click", "cf", "gq", "ml", "tk"]:
             indicators.append(f"High-risk or disposable top-level domain (.{tld})")
 
+        # Lookalike or suspicious verification keywords in domain
+        suspicious_domain_keywords = ["verify", "verification", "secure", "auth", "login", "update", "kyc"]
+        if any(kw in hostname for kw in suspicious_domain_keywords) and any(b in hostname for b in ["bank", "pay", "upi", "chase", "sbi", "hdfc", "icici", "axis"]):
+            indicators.append("Suspicious lookalike domain pairing financial brand terms with verification keywords")
+
     # 2. QR Analysis Indicators
     if qr_result and qr_result.get("detected"):
         qr_data = qr_result.get("data") or ""
@@ -79,24 +85,30 @@ def extract_security_indicators(
     # 3. Content Analysis Indicators (OCR text + user question)
     combined_text = f"{raw_ocr_text} {user_question}".lower()
     
-    # Urgency & Threat language
-    urgency_keywords = [
-        "within 24 hours", "immediate disconnection", "electricity will be disconnected",
-        "power will be cutoff", "power cutoff", "will be disconnected", "disconnected tonight",
-        "urgently", "account will be blocked", "suspended today", "penalty will be charged",
-        "last warning", "act immediately", "dear customer your power", "immediately or your",
-        "session expires in", "payment required within"
-    ]
-    if any(k in combined_text for k in urgency_keywords):
-        indicators.append("Urgent threat or deadline language (e.g. impending utility cutoff or suspension)")
+    # Urgency & Threat / Deadline language
+    urgency_pattern = r'\b(urgent|urgently|immediately|immediate|within \d+ (minutes?|hours?)|tonight|today|deadline|suspension|suspended|blocked|blocking|cutoff|penalty|expires?|last warning|permanent account suspension|disconnected)\b'
+    if re.search(urgency_pattern, combined_text):
+        indicators.append("Urgent threat or deadline language (e.g. impending account blocking, cutoff, or suspension)")
 
     # Credential solicitation (OTP / PIN / Password / CVV)
-    credential_keywords = [
-        "enter your pin", "enter upi pin", "share otp", "one time password",
-        "cvv number", "atm pin", "net banking password", "upi pin to receive"
-    ]
-    if any(k in combined_text for k in credential_keywords):
+    credential_pattern = r'\b(otp|one[- ]time password|upi pin|atm pin|pin|cvv|password|net banking password|credentials?)\b'
+    solicitation_verbs = r'\b(send|share|enter|provide|submit|give|confirm|type|ask for|requesting)\b'
+    if re.search(credential_pattern, combined_text) and (re.search(solicitation_verbs, combined_text) or "pin" in combined_text or "otp" in combined_text):
         indicators.append("Solicitation of sensitive security credentials (PIN, OTP, CVV, or password)")
+
+    # Unsolicited payment or nominal verification charge / advance-fee lure
+    payment_request_pattern = r'(\b(pay|paying|transfer|deposit|fee|charge|bill)\b.{0,30}(₹|\$|rs\.?|inr|usd|\d+))|(\b(pay|paying|transfer)\b.{0,20}\b(link|upi|account)\b)'
+    if re.search(payment_request_pattern, combined_text):
+        indicators.append("Unsolicited payment request or token verification fee (advance-fee payment lure)")
+
+    # Institutional or utility/banking impersonation warning
+    impersonation_pattern = r'\b(bank account|your bank|banking|utility|electricity|power supply|tax department|customs officer|police department)\b'
+    if re.search(impersonation_pattern, combined_text) and re.search(r'\b(blocked|suspended|cutoff|disconnected|penalty|verify immediately|action required)\b', combined_text):
+        indicators.append("Impersonation of official banking or utility institution with coercive action threats")
+
+    # Personal mobile phone number used for official utility or billing notification
+    if re.search(r'\b[6-9]\d{9}\b', combined_text) and any(w in combined_text for w in ["electricity", "power", "utility", "officer", "disconnect", "disconnected", "bill"]):
+        indicators.append("Personal mobile phone number used for official utility notification")
 
     # Personal email posing as enterprise notification
     if re.search(r'\b[a-zA-Z0-9._%+-]+@(gmail|yahoo|hotmail|outlook)\.com\b', combined_text):
@@ -113,7 +125,7 @@ def extract_security_indicators(
     if any(l in combined_text for l in lure_keywords):
         indicators.append("Unsolicited reward, lottery prize, or upfront fee requirement")
 
-    return indicators
+    return list(dict.fromkeys(indicators))
 
 def process_evidence_node(state: GraphState) -> Dict[str, Any]:
     """
@@ -134,6 +146,13 @@ def process_evidence_node(state: GraphState) -> Dict[str, Any]:
     raw_ocr_text = ""
     qr_result = {"detected": False}
     url_info = None
+
+    # Auto-detect URL from question if target_url was not explicitly supplied
+    if not target_url and state.get("question"):
+        url_match = re.search(r'https?://[^\s<>"\')]+(?<![\.,;:?!])', state.get("question", ""))
+        if url_match:
+            target_url = url_match.group(0)
+            metadata["url"] = target_url
 
     # 1. Process Image if present
     if image_bytes:
