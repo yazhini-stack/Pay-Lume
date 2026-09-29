@@ -33,5 +33,5 @@ export type SSEEvent =
   | { type: 'token'; data: { delta: string; section?: MessageSection } }
   | { type: 'citation'; data: Citation }
   | { type: 'evidence'; data: string[] }
-  | { type: 'done'; data: { messageId: string } }
+  | { type: 'done'; data: { messageId: string; message?: Message } }
   | { type: 'error'; data: { message: string; code?: string } };

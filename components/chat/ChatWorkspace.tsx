@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
-import { Conversation, Message } from "@/types/chat";
+import { Conversation, Message, Citation } from "@/types/chat";
 import { useChatStore } from "@/lib/stores/useChatStore";
 import { ConversationSidebar } from "./ConversationSidebar";
 import { MessageThread } from "./MessageThread";
@@ -61,24 +61,35 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
     queryFn: () => apiClient.getConversations()
   });
 
+  const currentConvId = activeConversationId || initialConversationId;
+
   // Fetch or hydrate active conversation
   const { data: activeConv, isLoading: isConvLoading } = useQuery({
-    queryKey: ["conversation", initialConversationId],
-    queryFn: () => (initialConversationId ? apiClient.getConversation(initialConversationId) : null),
-    enabled: Boolean(initialConversationId)
+    queryKey: ["conversation", currentConvId],
+    queryFn: () => (currentConvId ? apiClient.getConversation(currentConvId) : null),
+    enabled: Boolean(currentConvId)
   });
 
-  // Sync state when active conversation changes
+  // Sync state when switching conversations via navigation
   useEffect(() => {
-    if (activeConv) {
-      setActiveConversationId(activeConv.id);
-      setActiveEvidence(activeConv.evidence, activeConv.evidence.extractedContext);
-      setCurrentMessages(activeConv.messages || []);
-    } else if (!initialConversationId) {
+    if (initialConversationId) {
+      setActiveConversationId(initialConversationId);
+    } else {
       setActiveConversationId(null);
+      setActiveEvidence(null);
       setCurrentMessages([]);
     }
-  }, [activeConv, initialConversationId, setActiveConversationId, setActiveEvidence]);
+  }, [initialConversationId, setActiveConversationId, setActiveEvidence]);
+
+  // Sync loaded conversation messages when hydrating or switching
+  useEffect(() => {
+    if (activeConv && activeConv.id === currentConvId) {
+      setActiveEvidence(activeConv.evidence, activeConv.evidence?.extractedContext);
+      if (activeConv.messages && activeConv.messages.length > 0 && !isStreaming) {
+        setCurrentMessages(activeConv.messages);
+      }
+    }
+  }, [activeConv, currentConvId, isStreaming, setActiveEvidence]);
 
   // Handle selecting past conversation
   const handleSelectConversation = (id: string) => {
@@ -161,6 +172,10 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
     const abortController = new AbortController();
     setAbortController(abortController);
 
+    let accumulatedContent = "";
+    const accumulatedCitations: Citation[] = [];
+    let accumulatedEvidence: string[] = [];
+
     try {
       await apiClient.streamMessage(
         convId,
@@ -169,15 +184,37 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
           if (event.type === "status") {
             setStreamingStatus(event.data);
           } else if (event.type === "token") {
+            accumulatedContent += event.data.delta;
             appendStreamingToken(event.data.delta, event.data.section);
           } else if (event.type === "citation") {
+            accumulatedCitations.push(event.data);
             addStreamingCitation(event.data);
           } else if (event.type === "evidence") {
+            accumulatedEvidence = event.data;
             setStreamingSecurityEvidence(event.data);
           } else if (event.type === "done") {
-            // Stream complete: refetch conversation to sync complete history
+            // Construct or receive finalized assistant message
+            const asstMsg: Message = event.data.message || {
+              id: event.data.messageId || `msg-bot-${Date.now()}`,
+              conversationId: convId,
+              role: "assistant",
+              content: accumulatedContent,
+              citations: accumulatedCitations,
+              securityEvidence: accumulatedEvidence,
+              createdAt: new Date().toISOString()
+            };
+
+            // IMMEDIATELY commit assistant message to current chat's React state
+            setCurrentMessages((prev) => {
+              if (prev.some((m) => m.id === asstMsg.id)) return prev;
+              return [...prev, asstMsg];
+            });
+
+            // Sync conversation lists in background
             queryClient.invalidateQueries({ queryKey: ["conversation", convId] });
             queryClient.invalidateQueries({ queryKey: ["conversations"] });
+
+            // Turn off streaming AFTER the assistant message has been committed to UI state
             resetStreaming();
           } else if (event.type === "error") {
             setStreamError(event.data.message);

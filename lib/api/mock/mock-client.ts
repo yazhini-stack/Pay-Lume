@@ -354,7 +354,7 @@ export class MockApiClient {
       saveStoredConversations(all);
     }
 
-    onEvent({ type: 'done', data: { messageId } });
+    onEvent({ type: 'done', data: { messageId, message: asstMsg } });
   }
 
   private generateQuestionDrivenAnswer(

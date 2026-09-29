@@ -401,35 +401,52 @@ export class ApiClient {
     });
 
     // Save updated messages into local conversation
-    const updatedMessages: Message[] = [
-      ...(conv?.messages || []),
-      {
-        id: `msg-user-${Date.now() - 1}`,
-        conversationId,
-        role: "user",
-        content: question,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: `msg-bot-${Date.now()}`,
-        conversationId,
-        role: "assistant",
-        content: res.answer,
-        citations: (res.sources || []).map((s, idx) => ({
-          id: idx + 1,
-          title: s.title,
-          source: s.source,
-          category: s.category,
-          url: s.url || "",
-          snippet: s.snippet || ""
-        })),
-        securityEvidence: detectedEvidence,
-        createdAt: new Date().toISOString()
-      }
-    ];
+    const botMessageId = `msg-bot-${Date.now()}`;
+    const asstMessage: Message = {
+      id: botMessageId,
+      conversationId,
+      role: "assistant",
+      content: res.answer,
+      citations: (res.sources || []).map((s, idx) => ({
+        id: idx + 1,
+        title: s.title,
+        source: s.source,
+        category: s.category,
+        url: s.url || "",
+        snippet: s.snippet || ""
+      })),
+      securityEvidence: detectedEvidence,
+      createdAt: new Date().toISOString()
+    };
+
+    const existingMessages = conv?.messages || [];
+    const hasLastUserMsg = existingMessages.length > 0 &&
+      existingMessages[existingMessages.length - 1].role === "user" &&
+      existingMessages[existingMessages.length - 1].content === question;
+
+    const userMessage: Message = hasLastUserMsg
+      ? existingMessages[existingMessages.length - 1]
+      : {
+          id: `msg-user-${Date.now() - 1}`,
+          conversationId,
+          role: "user",
+          content: question,
+          createdAt: new Date().toISOString()
+        };
+
+    const updatedMessages: Message[] = hasLastUserMsg
+      ? [...existingMessages, asstMessage]
+      : [...existingMessages, userMessage, asstMessage];
+
     await this.updateConversationMessages(conversationId, updatedMessages);
 
-    onEvent({ type: "done", data: { messageId: `msg-bot-${Date.now()}` } });
+    onEvent({ 
+      type: "done", 
+      data: { 
+        messageId: botMessageId,
+        message: asstMessage
+      } 
+    });
   }
 }
 
