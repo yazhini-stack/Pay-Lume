@@ -20,7 +20,7 @@ import {
   AlertOctagon,
   BookOpen
 } from "lucide-react";
-import { formatTimestamp, cn } from "@/lib/utils";
+import { formatTimestamp, cn, getSafeExternalUrl, extractResourceDomain } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useChatStore } from "@/lib/stores/useChatStore";
@@ -254,39 +254,78 @@ export function MessageItem({ message }: MessageItemProps) {
           </div>
 
           <div className="p-3 space-y-2 text-xs">
-            {citations.map((c) => (
-              <div key={c.id} className="p-3 rounded-2xl bg-black/40 border border-emerald-500/10 space-y-1.5 hover:border-emerald-500/25 transition-colors">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30">
-                      {c.source}
-                    </span>
-                    {c.category && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-700/50">
-                        {c.category}
-                      </span>
-                    )}
-                    <span className="font-semibold text-emerald-100">{c.title}</span>
+            {citations.map((c) => {
+              const safeUrl = getSafeExternalUrl(c.url, c.source);
+              const displayDomain = extractResourceDomain(c.url, c.source);
+
+              return (
+                <div
+                  key={c.id}
+                  className="p-3.5 rounded-2xl bg-black/40 border border-emerald-500/10 space-y-2 hover:border-emerald-500/25 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30">
+                          {c.source}
+                        </span>
+                        {c.category && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-700/50">
+                            {c.category}
+                          </span>
+                        )}
+                        {displayDomain && (
+                          safeUrl ? (
+                            <a
+                              href={safeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] font-mono text-emerald-400/90 hover:text-emerald-200 hover:underline inline-flex items-center gap-1 transition-colors"
+                              title={`Open ${displayDomain} official website in a new tab`}
+                            >
+                              <span>{displayDomain}</span>
+                            </a>
+                          ) : (
+                            <span className="text-[11px] font-mono text-zinc-400">
+                              {displayDomain}
+                            </span>
+                          )
+                        )}
+                      </div>
+                      <div className="font-semibold text-emerald-100 text-xs leading-snug">
+                        {c.title}
+                      </div>
+                    </div>
+
+                    {/* External Link Button */}
+                    <div className="flex-shrink-0 self-start">
+                      {safeUrl ? (
+                        <a
+                          href={safeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 hover:border-emerald-400/50 text-[11px] font-medium transition-colors shadow-sm"
+                          title={`Open ${displayDomain || c.source} official advisory in a new tab`}
+                        >
+                          <span>Visit website</span>
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-zinc-500 italic px-2 py-1">
+                          Source URL unavailable
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {c.url && (
-                    <a
-                      href={c.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-400 hover:text-emerald-300 p-1 flex-shrink-0"
-                      title={`Official advisory link for ${c.title}`}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
+
+                  {c.snippet && (
+                    <p className="text-[11px] text-zinc-300 leading-relaxed italic pl-1 border-l-2 border-emerald-500/20">
+                      "{c.snippet}"
+                    </p>
                   )}
                 </div>
-                {c.snippet && (
-                  <p className="text-[11px] text-zinc-300 leading-relaxed italic pl-1">
-                    "{c.snippet}"
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -336,17 +375,27 @@ export function MessageItem({ message }: MessageItemProps) {
               "{activePopoverCitation.snippet}"
             </p>
             <div className="flex items-center justify-between pt-2">
-              {activePopoverCitation.url && (
-                <a
-                  href={activePopoverCitation.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-emerald-300 hover:underline flex items-center gap-1.5"
-                >
-                  <span>Read full official advisory</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
+              {(() => {
+                const modalUrl = getSafeExternalUrl(activePopoverCitation.url, activePopoverCitation.source);
+                if (modalUrl) {
+                  return (
+                    <a
+                      href={modalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-emerald-300 hover:underline flex items-center gap-1.5"
+                    >
+                      <span>Read full official advisory</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  );
+                }
+                return (
+                  <span className="text-xs text-zinc-500 italic">
+                    Official advisory URL unavailable
+                  </span>
+                );
+              })()}
               <button
                 onClick={() => setActivePopoverCitation(null)}
                 className="btn-pill-secondary text-xs px-3 py-1"

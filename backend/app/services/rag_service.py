@@ -1,4 +1,6 @@
 import time
+import re
+from urllib.parse import urlparse
 import logging
 from typing import List, Dict, Any, Optional
 from supabase import create_client, Client
@@ -11,6 +13,86 @@ logger = logging.getLogger(__name__)
 ENABLE_RAG_DEBUG_LOGGING = True
 MIN_BASE_SIMILARITY = 0.60
 MIN_FINAL_RELEVANCE = 0.64
+
+# Verified official website mappings for authoritative cybersecurity organizations
+KNOWN_OFFICIAL_WEBSITE_MAP: Dict[str, str] = {
+    "cisa": "https://www.cisa.gov/",
+    "fbi": "https://www.fbi.gov/",
+    "ic3": "https://www.ic3.gov/",
+    "ftc": "https://consumer.ftc.gov/",
+    "owasp": "https://owasp.org/",
+    "cert-in": "https://www.cert-in.org.in/",
+    "certin": "https://www.cert-in.org.in/",
+    "nist": "https://www.nist.gov/",
+}
+
+BLOCKED_URL_SCHEMES = ("javascript:", "data:", "file:", "vbscript:", "blob:")
+BLOCKED_URL_HOSTS = ("localhost", "127.0.0.1", "0.0.0.0", "::1", "testserver")
+DOMAIN_REGEX = re.compile(
+    r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:/[^\s]*)?$"
+)
+
+def normalize_and_validate_resource_url(
+    raw_url: Optional[str],
+    source_name: Optional[str] = None
+) -> Optional[str]:
+    """
+    Validates, normalizes, and secures Trusted Resource URLs before returning to client.
+    Priority:
+    1. URL stored in the trusted/RAG document metadata (or specific article URL)
+    2. Normalized domain if valid domain string (e.g. 'cisa.gov' -> 'https://www.cisa.gov/')
+    3. Known official website mapping for verified organization (CISA, FBI, FTC, OWASP, CERT-In)
+    Otherwise returns None (non-clickable).
+    Strictly forbids javascript:, data:, file:, localhost, private IPs, or malformed URLs.
+    """
+    candidate = (raw_url or "").strip()
+
+    if candidate:
+        lower_cand = candidate.lower()
+        # Reject prohibited dangerous schemes immediately
+        if any(lower_cand.startswith(bad_scheme) for bad_scheme in BLOCKED_URL_SCHEMES):
+            return None
+
+        # If candidate is a bare valid domain (e.g., 'cisa.gov', 'fbi.gov', 'consumer.ftc.gov')
+        if not lower_cand.startswith("http://") and not lower_cand.startswith("https://"):
+            first_slash = candidate.find("/")
+            domain_part = candidate[:first_slash] if first_slash != -1 else candidate
+            if DOMAIN_REGEX.match(candidate) or DOMAIN_REGEX.match(domain_part):
+                candidate = f"https://{candidate}"
+            else:
+                candidate = ""
+
+        # Validate parsed URL
+        if candidate:
+            try:
+                parsed = urlparse(candidate)
+                if parsed.scheme not in ("http", "https"):
+                    candidate = ""
+                else:
+                    host = (parsed.hostname or "").lower()
+                    if (
+                        not host
+                        or host in BLOCKED_URL_HOSTS
+                        or host.startswith("192.168.")
+                        or host.startswith("10.")
+                        or host.endswith(".local")
+                        or host.endswith(".internal")
+                        or (host.startswith("172.") and any(host.startswith(f"172.{i}.") for i in range(16, 32)))
+                    ):
+                        candidate = ""
+            except Exception:
+                candidate = ""
+
+    # If document has no valid URL stored, fallback to known verified organization mapping
+    if not candidate and source_name:
+        src_lower = source_name.strip().lower()
+        for org_key, official_url in KNOWN_OFFICIAL_WEBSITE_MAP.items():
+            if org_key in src_lower:
+                candidate = official_url
+                break
+
+    return candidate if candidate else None
+
 
 # Extensible registry of context-specific hardware, physical locations, and situational markers
 SPECIFIC_SCENARIOS = [
@@ -306,7 +388,15 @@ class RAGService:
             meta = doc.get("metadata") or {}
             
             title = doc.get("sanitized_title") or meta.get("document_title") or meta.get("title") or f"{source_name} Security Guidelines"
-            url = meta.get("source_url") or meta.get("url") or ""
+            candidate_url = (
+                meta.get("source_url")
+                or meta.get("url")
+                or meta.get("website")
+                or doc.get("source_url")
+                or doc.get("url")
+                or ""
+            )
+            validated_url = normalize_and_validate_resource_url(candidate_url, source_name=source_name) or ""
             
             # Format clean snippet
             if doc.get("is_sanitized"):
@@ -318,7 +408,7 @@ class RAGService:
                 title=title,
                 source=source_name,
                 category=category,
-                url=url,
+                url=validated_url,
                 snippet=snippet
             ))
 
