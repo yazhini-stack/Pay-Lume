@@ -2,9 +2,13 @@ import io
 import logging
 from typing import Dict, Any, Optional
 from PIL import Image
-import zxingcpp
-
 logger = logging.getLogger(__name__)
+
+try:
+    import zxingcpp
+except Exception as e:
+    zxingcpp = None
+    logger.warning(f"zxingcpp native library could not be loaded ({e}). QR scanning will fallback to multimodal vision.")
 
 class QRService:
     def decode_qr(self, image_bytes: bytes) -> Dict[str, Any]:
@@ -19,7 +23,7 @@ class QRService:
             "url": None
         }
 
-        if not image_bytes:
+        if not image_bytes or zxingcpp is None:
             return result
 
         try:

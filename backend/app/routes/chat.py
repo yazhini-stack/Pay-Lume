@@ -86,6 +86,8 @@ async def chat_endpoint(
         "image_bytes": image_bytes,
         "image_mime": image_mime,
         "conversation_history": history_list,
+        "evidence_type": "text",
+        "context": {"objects": [], "locations": [], "platforms": [], "transaction_context": None},
         "evidence_context": "",
         "security_evidence": [],
         "rag_sources": [],

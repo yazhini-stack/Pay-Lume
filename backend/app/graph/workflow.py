@@ -21,6 +21,8 @@ class GraphState(TypedDict):
     conversation_history: List[Dict[str, str]]
     
     # Computed state
+    evidence_type: str
+    context: Dict[str, Any]
     evidence_context: str
     security_evidence: List[str]
     rag_sources: List[SourceItem]
@@ -127,9 +129,167 @@ def extract_security_indicators(
 
     return list(dict.fromkeys(indicators))
 
+def extract_evidence_context(
+    evidence_type: str,
+    qr_result: Dict[str, Any],
+    url_info: Optional[Dict[str, Any]],
+    raw_ocr_text: str,
+    user_question: str
+) -> Dict[str, Any]:
+    """
+    Extracts structured contextual attributes directly supported by the evidence and question:
+    - objects: specific physical hardware, items, or visual elements detected
+    - locations: detected physical locations
+    - platforms: detected digital payment/messaging platforms
+    - transaction_context: overall transaction modality
+    Does NOT invent context; only includes attributes genuinely present in the evidence.
+    """
+    combined = f"{raw_ocr_text} {user_question}".lower()
+    if url_info:
+        combined += f" {url_info.get('requested_url', '')} {url_info.get('hostname', '')} {url_info.get('title', '')} {url_info.get('text_snippet', '')}".lower()
+    if qr_result and qr_result.get("data"):
+        combined += f" {qr_result.get('data', '')}".lower()
+
+    objects: List[str] = []
+    locations: List[str] = []
+    platforms: List[str] = []
+    transaction_context: Optional[str] = None
+
+    # Detect QR code
+    if (qr_result and qr_result.get("detected")) or "qr" in combined or "barcode" in combined:
+        objects.append("QR code")
+
+    # Specific physical objects / hardware
+    if re.search(r'\b(parking meter|parking pay station|pay by plate|parkmobile|meter parking)\b', combined):
+        objects.append("parking meter")
+        locations.append("parking")
+        transaction_context = "parking"
+
+    if re.search(r'\b(gas pump|fuel pump|petrol pump|fuel dispenser)\b', combined):
+        objects.append("gas pump")
+        locations.append("gas station")
+        transaction_context = "fuel"
+
+    if re.search(r'\b(ev charger|charging station|charging kiosk)\b', combined):
+        objects.append("charging station")
+
+    if re.search(r'\b(ticketing kiosk|transit ticketing kiosk|ticket vending machine|transit kiosk)\b', combined):
+        objects.append("ticketing kiosk")
+        locations.append("transit station")
+
+    if re.search(r'\b(atm|cash machine|automated teller)\b', combined):
+        objects.append("atm")
+
+    if re.search(r'\b(sticker|pasted over|adhesive overlay|peeling|misaligned sticker)\b', combined):
+        objects.append("sticker")
+
+    if re.search(r'\b(receipt|tax invoice|payment slip|bill of supply|invoice)\b', combined):
+        objects.append("receipt")
+        if not transaction_context:
+            transaction_context = "receipt_verification"
+
+    if re.search(r'\b(poster|menu|restaurant menu|table tent|standee|flyer)\b', combined):
+        if "menu" in combined:
+            objects.append("menu")
+        if "poster" in combined:
+            objects.append("poster")
+        if "table tent" in combined or "table" in combined:
+            objects.append("table")
+
+    # Locations
+    if re.search(r'\b(restaurant|cafe|coffee shop|dining|diner|bistro|eatery|food court)\b', combined):
+        locations.append("restaurant")
+        if not transaction_context:
+            transaction_context = "dining"
+
+    if re.search(r'\b(parking lot|parking garage|street parking)\b', combined):
+        locations.append("parking")
+
+    if re.search(r'\b(gas station|petrol station|fuel station)\b', combined):
+        locations.append("gas station")
+
+    if re.search(r'\b(transit station|metro station|bus station|train station|subway)\b', combined):
+        locations.append("transit station")
+
+    # Platforms
+    if re.search(r'\b(upi|gpay|google pay|phonepe|paytm|bhim)\b', combined):
+        platforms.append("upi")
+        if not transaction_context:
+            transaction_context = "upi_payment"
+
+    if re.search(r'\b(zelle|venmo|cash app|cashapp|paypal)\b', combined):
+        platforms.append("p2p")
+        if not transaction_context:
+            transaction_context = "p2p_transfer"
+
+    if re.search(r'\b(sms|text message|shortcode)\b', combined):
+        platforms.append("sms")
+
+    if re.search(r'\b(email|inbox|gmail|outlook)\b', combined):
+        platforms.append("email")
+
+    if re.search(r'\b(netbanking|online banking|bank login|portal|signin|sign-in)\b', combined) and any(b in combined for b in ["bank", "chase", "sbi", "hdfc", "icici", "wells", "citibank"]):
+        platforms.append("banking portal")
+        if not transaction_context:
+            transaction_context = "credential_login"
+
+    if re.search(r'\b(anydesk|teamviewer|rustdesk|quicksupport|screen share)\b', combined):
+        platforms.append("remote desktop")
+
+    # Transaction context fallback
+    if not transaction_context:
+        if re.search(r'\b(urgent|electricity|power bill|disconnect|cutoff|penalty)\b', combined):
+            transaction_context = "urgent_bill"
+        elif re.search(r'\b(pay|payment|transfer|charge|fee|amount|transaction)\b', combined):
+            transaction_context = "payment"
+
+    return {
+        "objects": list(dict.fromkeys(objects)),
+        "locations": list(dict.fromkeys(locations)),
+        "platforms": list(dict.fromkeys(platforms)),
+        "transaction_context": transaction_context
+    }
+
+def construct_retrieval_query(
+    question: str,
+    evidence_type: str,
+    context_data: Dict[str, Any],
+    security_evidence: List[str]
+) -> str:
+    """
+    Constructs a context-aware retrieval query combining question and verified evidence context.
+    """
+    terms: List[str] = [question.strip()]
+    objects = context_data.get("objects", [])
+    locations = context_data.get("locations", [])
+    platforms = context_data.get("platforms", [])
+    tx_context = context_data.get("transaction_context")
+
+    if evidence_type == "qr_code":
+        terms.append("QR code quishing scam")
+        if "parking meter" in objects or "parking" in locations:
+            terms.append("parking meter tampering sticker overlay physical security")
+        elif "restaurant" in locations or tx_context == "dining":
+            terms.append("restaurant menu fake payment destination verification")
+        else:
+            terms.append("payment destination verification preview URL")
+    elif evidence_type == "url":
+        terms.append("phishing malicious URL deceptive domain SSL misconception")
+        if "banking portal" in platforms or tx_context == "credential_login":
+            terms.append("banking login credential harvest")
+    elif evidence_type == "sms" or "sms" in platforms or tx_context == "urgent_bill":
+        terms.append("SMS phishing smishing urgent payment disconnection threat")
+    elif evidence_type == "receipt" or "receipt" in objects or tx_context == "receipt_verification":
+        terms.append("fake payment receipt invoice fraud verification P2P")
+    elif tx_context in ["payment", "p2p_transfer", "upi_payment"]:
+        terms.append("payment scam fraudulent transfer refund")
+
+    return " ".join(dict.fromkeys(" ".join(terms).split()))
+
 def process_evidence_node(state: GraphState) -> Dict[str, Any]:
     """
     Extracts forensic evidence from images (QR decoding + OCR/Vision) and URLs.
+    Computes evidence_type and context (objects, locations, platforms, transaction_context).
     """
     evidence_parts = []
     metadata = {
@@ -206,6 +366,42 @@ def process_evidence_node(state: GraphState) -> Dict[str, Any]:
 
         evidence_parts.append("\n".join(url_summary))
 
+    # Determine evidence_type
+    evidence_type = "text"
+    if qr_result.get("detected"):
+        evidence_type = "qr_code"
+    elif image_bytes:
+        combined_text_check = f"{raw_ocr_text} {state.get('question', '')}".lower()
+        if re.search(r'\b(receipt|invoice|tax invoice|payment slip|bill of supply)\b', combined_text_check):
+            evidence_type = "receipt"
+        elif re.search(r'\b(qr code|qr barcode)\b', combined_text_check):
+            evidence_type = "qr_code"
+        elif re.search(r'\b(sms|text message)\b', combined_text_check):
+            evidence_type = "sms"
+        else:
+            evidence_type = "image"
+    elif target_url:
+        evidence_type = "url"
+    else:
+        combined_text_check = state.get("question", "").lower()
+        if re.search(r'\b(receipt|invoice)\b', combined_text_check):
+            evidence_type = "receipt"
+        elif re.search(r'\b(sms|text message)\b', combined_text_check) or re.search(r'\b[6-9]\d{9}\b', combined_text_check):
+            evidence_type = "sms"
+        elif "qr" in combined_text_check:
+            evidence_type = "qr_code"
+
+    # Extract structured context
+    context_data = extract_evidence_context(
+        evidence_type=evidence_type,
+        qr_result=qr_result,
+        url_info=url_info,
+        raw_ocr_text=raw_ocr_text,
+        user_question=state.get("question", "")
+    )
+    metadata["evidence_type"] = evidence_type
+    metadata["context"] = context_data
+
     # 3. Detect concrete security indicators
     indicators = extract_security_indicators(
         qr_result=qr_result,
@@ -218,21 +414,51 @@ def process_evidence_node(state: GraphState) -> Dict[str, Any]:
     return {
         "evidence_context": "\n\n".join(evidence_parts),
         "security_evidence": indicators,
+        "evidence_type": evidence_type,
+        "context": context_data,
         "metadata": metadata,
         "url": target_url
     }
 
 def retrieve_rag_node(state: GraphState) -> Dict[str, Any]:
     """
-    Embeds user question and retrieves top matching cybersecurity advisories from Supabase.
+    Constructs a context-aware query, retrieves candidate documents from Supabase pgvector,
+    and applies contextual relevance filtering & reranking before passing to Gemini.
     """
     question = state.get("question", "")
-    
-    # Retrieve top 5 matching documents
-    raw_docs = rag_service.retrieve_relevant_documents(question, top_k=5)
-    formatted = rag_service.format_sources_and_context(raw_docs)
-    
+    evidence_type = state.get("evidence_type", "text")
+    context_data = state.get("context", {})
+    security_evidence = state.get("security_evidence", [])
+
+    # 1. Query Construction
+    retrieval_query = construct_retrieval_query(
+        question=question,
+        evidence_type=evidence_type,
+        context_data=context_data,
+        security_evidence=security_evidence
+    )
+
+    # 2. Existing Supabase Vector Search for Candidates
+    candidate_docs = rag_service.retrieve_relevant_documents(retrieval_query, top_k=6)
+
+    # 3. Contextual Relevance Filtering & Lightweight Reranking
+    relevant_docs = rag_service.filter_and_rerank_candidates(
+        candidates=candidate_docs,
+        query=retrieval_query,
+        evidence_type=evidence_type,
+        evidence_context=context_data,
+        top_k=3
+    )
+
+    # 4. Format Sources and Prompt Context
+    formatted = rag_service.format_sources_and_context(
+        relevant_docs,
+        evidence_context=context_data
+    )
+
     metadata = state.get("metadata", {})
+    metadata["retrieval_query"] = retrieval_query
+    metadata["candidates_count"] = len(candidate_docs)
     metadata["sources_count"] = len(formatted["sources"])
     metadata["perf_embedding_ms"] = getattr(rag_service, "last_embedding_ms", 0.0)
     metadata["perf_rag_ms"] = getattr(rag_service, "last_rag_ms", 0.0)
@@ -251,6 +477,9 @@ def generate_answer_node(state: GraphState) -> Dict[str, Any]:
     question = state.get("question", "")
     evidence_context = state.get("evidence_context", "")
     rag_context = state.get("rag_context_text", "")
+    if not rag_context.strip():
+        rag_context = "[No external security advisory chunks met the contextual relevance threshold. Provide analysis strictly grounded in the uploaded evidence and fundamental cybersecurity verification principles without referencing unevidenced external scenarios.]"
+
     history = state.get("conversation_history", [])
     image_bytes = state.get("image_bytes")
     image_mime = state.get("image_mime") or "image/jpeg"

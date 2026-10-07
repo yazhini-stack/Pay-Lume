@@ -8,6 +8,62 @@ from app.models.schemas import SourceItem
 
 logger = logging.getLogger(__name__)
 
+ENABLE_RAG_DEBUG_LOGGING = True
+MIN_BASE_SIMILARITY = 0.60
+MIN_FINAL_RELEVANCE = 0.64
+
+# Extensible registry of context-specific hardware, physical locations, and situational markers
+SPECIFIC_SCENARIOS = [
+    {
+        "name": "parking_meter",
+        "keywords": ["parking meter", "parking pay station", "pay by plate", "parkmobile", "parking kiosk", "meter parking"],
+        "check": lambda ctx: "parking meter" in ctx.get("objects", []) or "parking" in ctx.get("locations", []),
+        "sanitized_title": "CISA / FBI Guidance: Malicious QR Codes & Quishing (General Security Advisory)"
+    },
+    {
+        "name": "gas_pump",
+        "keywords": ["gas pump", "fuel pump", "petrol pump", "fuel dispenser"],
+        "check": lambda ctx: "gas pump" in ctx.get("objects", []) or "gas station" in ctx.get("locations", []),
+        "sanitized_title": "CISA / FBI Guidance: Malicious QR Codes & Quishing (General Security Advisory)"
+    },
+    {
+        "name": "ticketing_kiosk",
+        "keywords": ["ticketing kiosk", "transit ticketing kiosk", "ticket vending machine", "transit kiosk"],
+        "check": lambda ctx: "ticketing kiosk" in ctx.get("objects", []) or "transit station" in ctx.get("locations", []),
+        "sanitized_title": "CISA / FBI Guidance: Malicious QR Codes & Quishing (General Security Advisory)"
+    },
+    {
+        "name": "charging_station",
+        "keywords": ["outdoor charging station", "charging kiosk", "ev charger", "charging station"],
+        "check": lambda ctx: "charging station" in ctx.get("objects", []),
+        "sanitized_title": "CISA / FBI Guidance: Malicious QR Codes & Quishing (General Security Advisory)"
+    },
+    {
+        "name": "remote_desktop",
+        "keywords": ["remote desktop", "anydesk", "teamviewer", "rustdesk", "quicksupport", "screen-sharing", "screen share"],
+        "check": lambda ctx: "remote desktop" in ctx.get("platforms", []),
+        "sanitized_title": None
+    },
+    {
+        "name": "bank_portal_login",
+        "keywords": ["bank login portal", "netbanking password", "mfa login portal", "microsoft 365 login", "banking credentials"],
+        "check": lambda ctx: "banking portal" in ctx.get("platforms", []) or ctx.get("transaction_context") == "credential_login",
+        "sanitized_title": None
+    },
+    {
+        "name": "lottery_reward",
+        "keywords": ["lottery prize", "sweepstakes winner", "scratch card winner", "unclaimed refund", "unclaimed lottery"],
+        "check": lambda ctx: ctx.get("transaction_context") == "lottery_refund",
+        "sanitized_title": None
+    },
+    {
+        "name": "p2p_overpayment",
+        "keywords": ["fake overpayment", "accidental transfer refund", "sent you too much money", "overpayment scam"],
+        "check": lambda ctx: ctx.get("transaction_context") in ["p2p_transfer", "overpayment_scam"],
+        "sanitized_title": None
+    }
+]
+
 class RAGService:
     def __init__(self):
         self.url = settings.SUPABASE_URL
@@ -28,10 +84,10 @@ class RAGService:
                 return None
         return self._supabase
 
-    def retrieve_relevant_documents(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def retrieve_relevant_documents(self, query: str, top_k: int = 6) -> List[Dict[str, Any]]:
         """
         Generates a 1536-dimensional embedding using Gemini Embedding 2,
-        then calls the Supabase match_documents RPC directly with verified parameters to find the top_k most similar chunks.
+        then calls the Supabase match_documents RPC directly with verified parameters to find candidate chunks.
         """
         clean_query = (query or "").strip()
         if not clean_query:
@@ -59,7 +115,7 @@ class RAGService:
             response = client.rpc("match_documents", params).execute()
             self.last_rag_ms = (time.perf_counter() - t0_rag) * 1000
             if response.data:
-                logger.info(f"Retrieved {len(response.data)} documents from Supabase match_documents")
+                logger.info(f"Retrieved {len(response.data)} candidate document chunks from Supabase match_documents")
                 return response.data
             elif response.data == []:
                 logger.info("Supabase match_documents returned 0 matches.")
@@ -79,10 +135,166 @@ class RAGService:
         logger.warning("Could not complete RPC match_documents call.")
         return []
 
-    def format_sources_and_context(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def filter_and_rerank_candidates(
+        self,
+        candidates: List[Dict[str, Any]],
+        query: str,
+        evidence_type: str,
+        evidence_context: Dict[str, Any],
+        top_k: int = 3
+    ) -> List[Dict[str, Any]]:
+        """
+        Applies contextual relevance filtering and lightweight reranking:
+        - Evaluates vector similarity against base threshold
+        - Identifies specific scenario/hardware requirements in chunks
+        - Boosts chunks matching evidenced scenarios; downgrades/filters unevidenced scenario claims
+        - Preserves general security guidance chunks from mixed advisories
+        - Formats/sanitizes source titles if general guidance is retained but specific scenario is absent
+        - Logs full evaluation pipeline for auditability
+        """
+        if not candidates:
+            return []
+
+        objects = evidence_context.get("objects", [])
+        locations = evidence_context.get("locations", [])
+        platforms = evidence_context.get("platforms", [])
+        tx_context = evidence_context.get("transaction_context")
+        is_parking_meter = "parking meter" in objects or "parking" in locations
+
+        scored_candidates: List[Dict[str, Any]] = []
+        candidate_log_lines: List[str] = []
+
+        for c_idx, doc in enumerate(candidates, start=1):
+            content = doc.get("content", "")
+            lower_content = content.lower()
+            source_name = doc.get("source", "Authoritative Advisory")
+            category = (doc.get("category") or "cybersecurity").lower()
+            meta = doc.get("metadata") or {}
+            orig_title = meta.get("document_title") or meta.get("title") or f"{source_name} Security Guidelines"
+            raw_sim = float(doc.get("similarity", 0.0))
+
+            # 1. Base similarity check
+            if raw_sim < MIN_BASE_SIMILARITY:
+                candidate_log_lines.append(
+                    f"Candidate [{c_idx}]: {orig_title} (chunk {meta.get('chunk_index', '?')})\n"
+                    f"  similarity = {raw_sim:.3f}\n"
+                    f"  context_match = false (below base threshold {MIN_BASE_SIMILARITY})\n"
+                    f"  decision = REJECT_LOW_SIMILARITY"
+                )
+                continue
+
+            # 2. Specific scenario checks
+            matched_scenarios = []
+            mismatched_scenarios = []
+            scenario_bonus = 0.0
+            scenario_penalty = 0.0
+            sanitized_title = None
+
+            for scenario in SPECIFIC_SCENARIOS:
+                if any(kw in lower_content for kw in scenario["keywords"]):
+                    if scenario["check"](evidence_context):
+                        matched_scenarios.append(scenario["name"])
+                        scenario_bonus += 0.20
+                    else:
+                        mismatched_scenarios.append(scenario["name"])
+                        # If the chunk exclusively or heavily asserts this specific absent scenario
+                        # (e.g. detailed instructions on parking meter sticker overlays), apply penalty
+                        scenario_penalty += 0.35
+                        if scenario.get("sanitized_title"):
+                            sanitized_title = scenario["sanitized_title"]
+
+            # Also check if original document title references a specific scenario absent from evidence
+            if "parking meter" in orig_title.lower() and not is_parking_meter:
+                if not sanitized_title:
+                    sanitized_title = "CISA / FBI Guidance: Malicious QR Codes & Quishing (General Security Advisory)"
+
+            # 3. Evidence type & category match bonus
+            category_bonus = 0.0
+            if evidence_type == "qr_code" and category == "qr_scams":
+                category_bonus += 0.15
+            elif evidence_type == "url" and category == "malicious_urls":
+                category_bonus += 0.15
+            elif evidence_type in ["sms", "text"] and category in ["phishing", "payment_scams"]:
+                category_bonus += 0.15
+            elif tx_context in ["payment", "p2p_transfer", "upi_payment", "receipt_verification"] and category == "payment_scams":
+                category_bonus += 0.15
+
+            # 4. Transaction context bonus
+            tx_bonus = 0.0
+            if tx_context == "receipt_verification" and any(w in lower_content for w in ["receipt", "invoice", "transfer", "record"]):
+                tx_bonus += 0.10
+            elif tx_context == "urgent_bill" and any(w in lower_content for w in ["urgent", "deadline", "immediate", "disconnect", "penalty"]):
+                tx_bonus += 0.10
+
+            # 5. Compute final relevance
+            final_relevance = raw_sim + scenario_bonus + category_bonus + tx_bonus - scenario_penalty
+
+            # 6. Determine decision
+            decision = "UNKNOWN"
+            is_valid = True
+
+            if scenario_penalty > 0 and final_relevance < MIN_FINAL_RELEVANCE:
+                decision = "DOWNGRADE/FILTER (scenario unsupported by evidence)"
+                is_valid = False
+            elif final_relevance < MIN_FINAL_RELEVANCE:
+                decision = f"REJECT_INSUFFICIENT_RELEVANCE ({final_relevance:.3f} < {MIN_FINAL_RELEVANCE})"
+                is_valid = False
+            elif matched_scenarios:
+                decision = f"KEEP_SPECIFIC_MATCH ({', '.join(matched_scenarios)})"
+            elif mismatched_scenarios:
+                # Kept because general guidance portion outweighed the scenario penalty
+                decision = "KEEP_GENERAL_GUIDANCE (unevidenced scenario claims sanitized)"
+            else:
+                decision = "KEEP_GENERAL_GUIDANCE"
+
+            candidate_log_lines.append(
+                f"Candidate [{c_idx}]: {orig_title} (chunk {meta.get('chunk_index', '?')})\n"
+                f"  similarity = {raw_sim:.3f}\n"
+                f"  final_relevance = {final_relevance:.3f} (bonus: +{scenario_bonus+category_bonus+tx_bonus:.2f}, penalty: -{scenario_penalty:.2f})\n"
+                f"  context_match = {'specific' if matched_scenarios else ('mismatched' if mismatched_scenarios else 'general')}\n"
+                f"  decision = {decision}"
+            )
+
+            if is_valid:
+                doc_copy = dict(doc)
+                doc_copy["final_relevance"] = final_relevance
+                doc_copy["sanitized_title"] = sanitized_title if sanitized_title else orig_title
+                doc_copy["is_sanitized"] = bool(sanitized_title)
+                scored_candidates.append(doc_copy)
+
+        # Sort by final relevance descending
+        scored_candidates.sort(key=lambda x: x.get("final_relevance", 0.0), reverse=True)
+        final_docs = scored_candidates[:top_k]
+
+        # Log pipeline summary
+        if ENABLE_RAG_DEBUG_LOGGING:
+            logger.info(
+                f"\n=== [RAG CONTEXTUAL RELEVANCE EVALUATION] ===\n"
+                f"Evidence context:\n"
+                f"  type: {evidence_type}\n"
+                f"  objects: {objects}\n"
+                f"  locations: {locations}\n"
+                f"  platforms: {platforms}\n"
+                f"  transaction_context: {tx_context}\n"
+                f"  parking_meter_detected: {is_parking_meter}\n"
+                f"Retrieval query:\n  {query}\n"
+                f"Evaluated candidates:\n"
+                + "\n\n".join(candidate_log_lines)
+                + f"\n\nFinal documents passed to Gemini: {len(final_docs)} chunk(s)\n"
+                + "============================================="
+            )
+
+        return final_docs
+
+    def format_sources_and_context(
+        self,
+        documents: List[Dict[str, Any]],
+        evidence_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Converts retrieved document records into structured SourceItem list
         and formatted text block for Gemini prompt injection.
+        Respects sanitized general titles when context-specific claims were excluded.
         """
         source_items: List[SourceItem] = []
         context_blocks: List[str] = []
@@ -93,10 +305,14 @@ class RAGService:
             category = doc.get("category", "cybersecurity")
             meta = doc.get("metadata") or {}
             
-            title = meta.get("document_title") or meta.get("title") or f"{source_name} Security Guidelines"
+            title = doc.get("sanitized_title") or meta.get("document_title") or meta.get("title") or f"{source_name} Security Guidelines"
             url = meta.get("source_url") or meta.get("url") or ""
             
-            snippet = content[:250].replace("\n", " ") + ("..." if len(content) > 250 else "")
+            # Format clean snippet
+            if doc.get("is_sanitized"):
+                snippet = "Authoritative guidance on verifying QR destinations, previewing decoded web links, and validating recipient merchant identity before authorizing payments."
+            else:
+                snippet = content[:250].replace("\n", " ") + ("..." if len(content) > 250 else "")
 
             source_items.append(SourceItem(
                 title=title,
@@ -116,3 +332,4 @@ class RAGService:
         }
 
 rag_service = RAGService()
+
