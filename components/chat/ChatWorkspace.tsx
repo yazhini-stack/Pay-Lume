@@ -114,19 +114,6 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
     }
   };
 
-  // Handle loading sample evidence from empty state
-  const handleSelectSample = (type: "qr" | "url" | "message" | "screenshot") => {
-    const sample = apiClient.loadSampleConversation(type);
-    if (sample) {
-      setActiveConversationId(sample.id);
-      setActiveEvidence(sample.evidence, sample.evidence?.extractedContext);
-      setCurrentMessages(sample.messages || []);
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      queryClient.invalidateQueries({ queryKey: ["conversation", sample.id] });
-      router.push(`/chat/${sample.id}`);
-    }
-  };
-
   // Handle sending a message and streaming the 3-section answer
   const handleSendMessage = async (question: string) => {
     if (!question.trim() || isStreaming) return;
@@ -297,7 +284,6 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
             <MessageThread
               messages={currentMessages}
               isLoading={isConvLoading}
-              onSelectSampleEvidence={handleSelectSample}
               onRetryStream={() => {
                 const lastUserMsg = [...currentMessages].reverse().find((m) => m.role === "user");
                 if (lastUserMsg?.content) {

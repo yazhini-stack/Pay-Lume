@@ -12,25 +12,18 @@ import {
   ArrowDown, 
   WifiOff, 
   AlertCircle, 
-  QrCode, 
-  Globe, 
-  FileText, 
-  ImageIcon,
   Sparkles
 } from "lucide-react";
-import { apiClient } from "@/lib/api/client";
 
 interface MessageThreadProps {
   messages: Message[];
   isLoading?: boolean;
-  onSelectSampleEvidence?: (type: "qr" | "url" | "message" | "screenshot") => void;
   onRetryStream?: () => void;
 }
 
 export function MessageThread({
   messages,
   isLoading,
-  onSelectSampleEvidence,
   onRetryStream
 }: MessageThreadProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -119,60 +112,6 @@ export function MessageThread({
                 Paylume helps you inspect suspicious payment requests, QR barcodes, SMS alerts, and invoices with clinical clarity.
               </p>
             </div>
-
-            {/* Quick Starter Sample Evidence */}
-            {onSelectSampleEvidence && (
-              <div className="w-full pt-4 space-y-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400/80">
-                  Or load a verified test case:
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left">
-                  <button
-                    onClick={() => onSelectSampleEvidence("qr")}
-                    className="p-3 rounded-2xl bg-[#09150d] border border-emerald-500/15 hover:border-emerald-400/40 hover:bg-[#0e2114] transition-all text-xs space-y-1 group"
-                  >
-                    <div className="flex items-center gap-2 text-emerald-300 font-semibold group-hover:text-emerald-200">
-                      <QrCode className="h-4 w-4 text-emerald-400" />
-                      <span>Tampered Parking QR</span>
-                    </div>
-                    <p className="text-zinc-400 text-[11px]">Adhesive sticker masquerading as municipal parking</p>
-                  </button>
-
-                  <button
-                    onClick={() => onSelectSampleEvidence("url")}
-                    className="p-3 rounded-2xl bg-[#09150d] border border-emerald-500/15 hover:border-emerald-400/40 hover:bg-[#0e2114] transition-all text-xs space-y-1 group"
-                  >
-                    <div className="flex items-center gap-2 text-emerald-300 font-semibold group-hover:text-emerald-200">
-                      <Globe className="h-4 w-4 text-emerald-400" />
-                      <span>Spoofed Bank Domain</span>
-                    </div>
-                    <p className="text-zinc-400 text-[11px]">Lookalike banking link on newly registered TLD</p>
-                  </button>
-
-                  <button
-                    onClick={() => onSelectSampleEvidence("message")}
-                    className="p-3 rounded-2xl bg-[#09150d] border border-emerald-500/15 hover:border-emerald-400/40 hover:bg-[#0e2114] transition-all text-xs space-y-1 group"
-                  >
-                    <div className="flex items-center gap-2 text-emerald-300 font-semibold group-hover:text-emerald-200">
-                      <FileText className="h-4 w-4 text-emerald-400" />
-                      <span>Urgent Power Disconnect SMS</span>
-                    </div>
-                    <p className="text-zinc-400 text-[11px]">Utility cutoff threat from personal phone number</p>
-                  </button>
-
-                  <button
-                    onClick={() => onSelectSampleEvidence("screenshot")}
-                    className="p-3 rounded-2xl bg-[#09150d] border border-emerald-500/15 hover:border-emerald-400/40 hover:bg-[#0e2114] transition-all text-xs space-y-1 group"
-                  >
-                    <div className="flex items-center gap-2 text-emerald-300 font-semibold group-hover:text-emerald-200">
-                      <ImageIcon className="h-4 w-4 text-emerald-400" />
-                      <span>Forged Escrow Receipt</span>
-                    </div>
-                    <p className="text-zinc-400 text-[11px]">Advance-fee payment release requirement</p>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         ) : (
           <>
