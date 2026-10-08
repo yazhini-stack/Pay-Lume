@@ -286,11 +286,53 @@ def construct_retrieval_query(
 
     return " ".join(dict.fromkeys(" ".join(terms).split()))
 
+CONVERSATIONAL_EXACT = {
+    "thank you", "thanks", "thanks!", "thank you!", "thanks so much", "thank you so much",
+    "okay", "ok", "k", "got it", "understood", "that makes sense", "makes sense",
+    "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+    "bye", "goodbye", "cool", "great", "nice", "sounds good", "alright"
+}
+
+def is_conversational_message(text: str) -> bool:
+    clean = re.sub(r'[^\w\s]', '', text.lower().strip())
+    if clean in CONVERSATIONAL_EXACT:
+        return True
+    pattern = r'^(hi|hello|hey|thanks|thank you|ok|okay|got it|understood|that makes sense|bye|goodbye)(\s+(there|paylume|pay-lume|assistant|so much|very much))?$'
+    return bool(re.match(pattern, clean))
+
+def get_conversational_reply(text: str) -> str:
+    clean = re.sub(r'[^\w\s]', '', text.lower().strip())
+    if any(w in clean for w in ["thank", "thanks"]):
+        return "You're welcome! Let me know if you have any other questions."
+    if any(w in clean for w in ["hi", "hello", "hey", "good morning", "good afternoon"]):
+        return "Hello! How can I help you inspect or understand a payment request or link today?"
+    if any(w in clean for w in ["ok", "okay", "got it", "understood", "makes sense", "sounds good", "great"]):
+        return "Glad that helps! Feel free to ask if you'd like me to explain anything further or check another item."
+    return "Understood! Let me know if you need help with anything else."
+
 def process_evidence_node(state: GraphState) -> Dict[str, Any]:
     """
     Extracts forensic evidence from images (QR decoding + OCR/Vision) and URLs.
     Computes evidence_type and context (objects, locations, platforms, transaction_context).
     """
+    # Conversational turn bypass
+    user_q = state.get("question", "")
+    if is_conversational_message(user_q):
+        return {
+            "evidence_context": "",
+            "security_evidence": [],
+            "evidence_type": "conversational",
+            "context": {},
+            "metadata": {
+                "qr_detected": False,
+                "url_analyzed": False,
+                "image_analyzed": False,
+                "security_evidence": [],
+                "is_conversational": True
+            },
+            "url": None
+        }
+
     evidence_parts = []
     metadata = {
         "qr_detected": False,
@@ -425,6 +467,13 @@ def retrieve_rag_node(state: GraphState) -> Dict[str, Any]:
     Constructs a context-aware query, retrieves candidate documents from Supabase pgvector,
     and applies contextual relevance filtering & reranking before passing to Gemini.
     """
+    if state.get("evidence_type") == "conversational":
+        return {
+            "rag_sources": [],
+            "rag_context_text": "",
+            "metadata": state.get("metadata", {})
+        }
+
     question = state.get("question", "")
     evidence_type = state.get("evidence_type", "text")
     context_data = state.get("context", {})
@@ -473,6 +522,12 @@ def generate_answer_node(state: GraphState) -> Dict[str, Any]:
     """
     Generates the synthesized, question-driven answer using Gemini.
     """
+    if state.get("evidence_type") == "conversational":
+        return {
+            "final_answer": get_conversational_reply(state.get("question", "")),
+            "metadata": state.get("metadata", {})
+        }
+
     import time
     question = state.get("question", "")
     evidence_context = state.get("evidence_context", "")

@@ -10,6 +10,7 @@ import { MessageThread } from "./MessageThread";
 import { Composer } from "./Composer";
 import { EvidencePanel } from "@/components/evidence/EvidencePanel";
 import { AlreadyPaidModal } from "./AlreadyPaidModal";
+import { SecurityInsights } from "./SecurityInsights";
 import { 
   PanelRightClose, 
   PanelRightOpen, 
@@ -43,12 +44,17 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
     toggleEvidencePanel,
     toggleSidebar,
     setStreamingSecurityEvidence,
+    streamingSecurityEvidence,
+    streamingCitations,
     isAlreadyPaidModalOpen,
+    openAlreadyPaidModal,
     closeAlreadyPaidModal,
     setPrefilledQuestion
   } = useChatStore();
 
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
+  const [activeSecurityEvidence, setActiveSecurityEvidence] = useState<string[]>([]);
+  const [activeTrustedResources, setActiveTrustedResources] = useState<Citation[]>([]);
 
   // Fetch all conversations
   const { data: conversations = [], isLoading: isConvsLoading } = useQuery({
@@ -86,6 +92,57 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
     }
   }, [activeConv, currentConvId, isStreaming, setActiveEvidence]);
 
+  // Synchronize live streaming evidence and citations into security insights
+  useEffect(() => {
+    if (streamingSecurityEvidence.length > 0) {
+      setActiveSecurityEvidence(streamingSecurityEvidence);
+    }
+    if (streamingCitations.length > 0) {
+      setActiveTrustedResources((prev) => {
+        const merged = [...prev];
+        for (const c of streamingCitations) {
+          if (!merged.some((m) => m.id === c.id || m.title === c.title)) {
+            merged.push(c);
+          }
+        }
+        return merged;
+      });
+    }
+  }, [streamingSecurityEvidence, streamingCitations]);
+
+  // Synchronize persistent security insights from conversation messages
+  useEffect(() => {
+    if (currentMessages.length === 0) {
+      setActiveSecurityEvidence([]);
+      setActiveTrustedResources([]);
+      return;
+    }
+
+    // Extract the latest non-empty security evidence indicators from assistant messages
+    const latestEvidenceMsg = [...currentMessages]
+      .reverse()
+      .find((m) => m.role === "assistant" && m.securityEvidence && m.securityEvidence.length > 0);
+
+    if (latestEvidenceMsg?.securityEvidence && latestEvidenceMsg.securityEvidence.length > 0) {
+      setActiveSecurityEvidence(latestEvidenceMsg.securityEvidence);
+    }
+
+    // Accumulate all unique citations across assistant messages in this conversation
+    const allCitations: Citation[] = [];
+    for (const m of currentMessages) {
+      if (m.role === "assistant" && m.citations && m.citations.length > 0) {
+        for (const c of m.citations) {
+          if (!allCitations.some((existing) => existing.id === c.id || existing.title === c.title)) {
+            allCitations.push(c);
+          }
+        }
+      }
+    }
+    if (allCitations.length > 0) {
+      setActiveTrustedResources(allCitations);
+    }
+  }, [currentMessages]);
+
   // Handle selecting past conversation
   const handleSelectConversation = (id: string) => {
     router.push(`/chat/${id}`);
@@ -96,6 +153,8 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
     setActiveConversationId(null);
     setActiveEvidence(null);
     setCurrentMessages([]);
+    setActiveSecurityEvidence([]);
+    setActiveTrustedResources([]);
     resetStreaming();
     router.push("/chat");
   };
@@ -287,6 +346,13 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
               }}
             />
           </div>
+
+          {/* Persistent Collapsible Security Insights Area */}
+          <SecurityInsights
+            indicators={activeSecurityEvidence}
+            resources={activeTrustedResources}
+            onOpenAlreadyPaid={openAlreadyPaidModal}
+          />
 
           {/* Composer (Persistent at bottom) */}
           <div className="p-4 sm:p-5 border-t border-emerald-500/15 bg-gradient-to-t from-[#060b08] via-[#060b08]/90 to-transparent flex-shrink-0">

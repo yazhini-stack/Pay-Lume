@@ -9,6 +9,7 @@ import {
 import { Conversation, Message } from "@/types/chat";
 import { EvidencePayload } from "@/types/evidence";
 import { supabase } from "@/lib/supabase/client";
+import { isConversationalMessage } from "@/lib/utils";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === "true";
 
@@ -361,7 +362,13 @@ export class ApiClient {
       return mockApiClient.streamMessage(conversationId, question, onEvent, signal);
     }
 
-    onEvent({ type: "status", data: { step: "retrieving", message: "Analyzing evidence with Gemini & consulting RAG knowledge..." } });
+    const isConv = isConversationalMessage(question);
+
+    if (isConv) {
+      onEvent({ type: "status", data: { step: "generating", message: "Responding..." } });
+    } else {
+      onEvent({ type: "status", data: { step: "retrieving", message: "Analyzing evidence with Gemini & consulting RAG knowledge..." } });
+    }
 
     const convs = this.getLocalConversations();
     const conv = convs.find((c) => c.id === conversationId);
@@ -371,14 +378,14 @@ export class ApiClient {
       content: m.content || ""
     }));
 
-    // Forward attached text evidence to backend if present
+    // Forward attached text evidence to backend ONLY if not a simple conversational remark
     let promptQuestion = question;
-    if (conv?.evidence?.rawText && !question.includes(conv.evidence.rawText.slice(0, 30))) {
+    if (!isConv && conv?.evidence?.rawText && !question.includes(conv.evidence.rawText.slice(0, 30))) {
       promptQuestion = `[Attached Message Evidence]:\n${conv.evidence.rawText}\n\n[User Question]:\n${question}`;
     }
 
-    let targetUrl = conv?.evidence?.url;
-    if (!targetUrl) {
+    let targetUrl = !isConv ? conv?.evidence?.url : undefined;
+    if (!targetUrl && !isConv) {
       const urlMatch = (conv?.evidence?.rawText || question).match(/https?:\/\/[^\s<>"\')]+/i);
       if (urlMatch) {
         targetUrl = urlMatch[0];
@@ -387,12 +394,14 @@ export class ApiClient {
     
     // Safely resolve image: either in-memory Blob/File or restored from data: URL
     let targetImage: Blob | undefined = undefined;
-    if (conv?.evidence?.rawFile instanceof Blob && conv.evidence.rawFile.size > 0) {
-      targetImage = conv.evidence.rawFile;
-    } else if (conv?.evidence?.previewUrl && typeof conv.evidence.previewUrl === "string" && conv.evidence.previewUrl.startsWith("data:image/")) {
-      const restored = dataUriToBlob(conv.evidence.previewUrl);
-      if (restored) {
-        targetImage = restored;
+    if (!isConv) {
+      if (conv?.evidence?.rawFile instanceof Blob && conv.evidence.rawFile.size > 0) {
+        targetImage = conv.evidence.rawFile;
+      } else if (conv?.evidence?.previewUrl && typeof conv.evidence.previewUrl === "string" && conv.evidence.previewUrl.startsWith("data:image/")) {
+        const restored = dataUriToBlob(conv.evidence.previewUrl);
+        if (restored) {
+          targetImage = restored;
+        }
       }
     }
 
@@ -404,8 +413,8 @@ export class ApiClient {
       signal
     });
 
-    // Stream the citations
-    if (res.sources && res.sources.length > 0) {
+    // Stream the citations (only for actual security analysis)
+    if (!isConv && res.sources && res.sources.length > 0) {
       res.sources.forEach((s, idx) => {
         onEvent({
           type: "citation",
@@ -421,12 +430,14 @@ export class ApiClient {
       });
     }
 
-    // Stream detected security evidence indicators
-    const detectedEvidence = res.security_evidence || res.metadata?.security_evidence || [];
-    onEvent({
-      type: "evidence",
-      data: detectedEvidence
-    });
+    // Stream detected security evidence indicators (only for actual security analysis)
+    const detectedEvidence = isConv ? [] : (res.security_evidence || res.metadata?.security_evidence || []);
+    if (!isConv) {
+      onEvent({
+        type: "evidence",
+        data: detectedEvidence
+      });
+    }
 
     // Stream tokens of the direct answer
     onEvent({

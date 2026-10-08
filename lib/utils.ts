@@ -133,3 +133,40 @@ export function extractResourceDomain(
   return "";
 }
 
+export function isConversationalMessage(text: string): boolean {
+  if (!text) return false;
+  const clean = text.trim().toLowerCase().replace(/[.,!?;:]+$/, "").trim();
+
+  const exactPhrases = [
+    "thank you", "thanks", "thank you so much", "thanks a lot", "many thanks", "thx", "ty",
+    "ok", "okay", "k", "got it", "understood", "that makes sense", "makes sense",
+    "sounds good", "alright", "all right", "sure", "cool", "great", "awesome", "perfect",
+    "hi", "hello", "hey", "greetings", "good morning", "good afternoon", "good evening", "good day",
+    "bye", "goodbye", "see you", "have a good one", "have a nice day",
+    "ok got it", "okay got it", "got it thanks", "got it thank you", "ok thanks", "okay thanks",
+    "understood thanks", "understood thank you", "great thanks", "perfect thanks"
+  ];
+
+  if (exactPhrases.includes(clean)) return true;
+
+  const conversationalPattern = /^(thanks?(\s+you)?(\s+so\s+much|\s+a\s+lot)?|ok(ay)?|got\s+it|understood|that\s+makes?\s+sense|makes?\s+sense|hi|hello|hey|good\s+(morning|afternoon|evening|day)|bye|goodbye)[.!?]*$/i;
+  return conversationalPattern.test(clean);
+}
+
+export function getConversationalReply(text: string): string {
+  const clean = text.trim().toLowerCase();
+  if (clean.includes("thank") || clean.includes("thx") || clean.includes("ty")) {
+    return "You’re welcome! Let me know if you have any other questions.";
+  }
+  if (clean.includes("hi") || clean.includes("hello") || clean.includes("hey")) {
+    return "Hello! How can I help you inspect suspicious payment requests, QR codes, or messages today?";
+  }
+  if (clean.includes("bye") || clean.includes("see you")) {
+    return "Stay safe! Reach out anytime you want to check a suspicious payment transaction.";
+  }
+  if (clean.includes("ok") || clean.includes("got it") || clean.includes("understood") || clean.includes("sense")) {
+    return "Glad that makes sense! Feel free to ask if you have any follow-up questions.";
+  }
+  return "Happy to help! Let me know if you have any other questions or need to inspect another payment item.";
+}
+

@@ -7,6 +7,7 @@ import {
   SSEEvent 
 } from "@/types/api";
 import { MOCK_PRELOADED_CONVERSATIONS, MOCK_CITATIONS } from "./fixtures";
+import { isConversationalMessage, getConversationalReply } from "@/lib/utils";
 
 const STORAGE_KEY = "paylume_mock_conversations";
 
@@ -262,7 +263,45 @@ export class MockApiClient {
     const conv = all.find((c) => c.id === conversationId);
     const evidence = conv?.evidence;
 
-    // Stage 1: Pipeline status progression
+    // If it's a conversational message, skip security pipeline delay
+    if (isConversationalMessage(question)) {
+      const { content } = this.generateQuestionDrivenAnswer(question, evidence);
+      if (content) {
+        const words = content.split(" ");
+        for (let i = 0; i < words.length; i++) {
+          if (signal?.aborted) return;
+          const delta = (i === 0 ? "" : " ") + words[i];
+          onEvent({ type: 'token', data: { delta } });
+          await new Promise((r) => setTimeout(r, 12));
+        }
+      }
+      const messageId = `msg-asst-${Date.now()}`;
+      const userMsg: Message = {
+        id: `msg-user-${Date.now()}`,
+        conversationId,
+        role: 'user',
+        content: question,
+        createdAt: new Date().toISOString()
+      };
+      const asstMsg: Message = {
+        id: messageId,
+        conversationId,
+        role: 'assistant',
+        content,
+        citations: [],
+        securityEvidence: [],
+        createdAt: new Date().toISOString()
+      };
+      if (conv) {
+        conv.messages.push(userMsg, asstMsg);
+        conv.updatedAt = new Date().toISOString();
+        saveStoredConversations(all);
+      }
+      onEvent({ type: 'done', data: { messageId, message: asstMsg } });
+      return;
+    }
+
+    // Stage 1: Pipeline status progression for security queries
     const steps: { step: 'extracting' | 'retrieving' | 'reranking' | 'generating'; msg: string; delay: number }[] = [
       { step: 'extracting', msg: 'Analyzing question and attached evidence parameters...', delay: 350 },
       { step: 'retrieving', msg: 'Querying CISA, FTC, OWASP & CERT-In security advisories...', delay: 450 },
@@ -370,6 +409,34 @@ export class MockApiClient {
     const evType = evidence?.type || "unknown";
     const citations: Citation[] = [];
 
+    // 0. PURE CONVERSATIONAL TURNS (e.g. "Thank you", "Thanks", "Okay", "Got it", "Hi", "Hello")
+    if (isConversationalMessage(question)) {
+      return {
+        content: getConversationalReply(question),
+        citations: [],
+        securityEvidence: []
+      };
+    }
+
+    // 0b. CONVERSATION FOLLOW-UP QUESTIONS (Context-aware explanations)
+    // Follow-up: "Why?" or "Why is the link suspicious?"
+    if (q === "why" || q === "why?" || q.includes("why is the link") || q.includes("why is it suspicious") || q.includes("why suspicious") || q.includes("why is this suspicious")) {
+      return {
+        content: `The link was flagged because of multiple concrete security observations:\n\n1. **Unencrypted HTTP Connection**: The destination does not use SSL/TLS encryption, meaning any credentials or personal data entered can be intercepted.\n2. **Lookalike Financial Domain**: The hostname combines financial brand terms with authentication keywords (\`secure-chase-auth-verify\`), a standard typosquatting tactic.\n3. **High-Risk Disposable TLD**: Registered on a generic top-level domain (\`.xyz\`) only 2 days ago via privacy proxy services.\n4. **Credential Solicitation & Artificial Urgency**: The page prompts for login passwords alongside an urgent countdown timer (*"Session expires in 05:00"*) to pressure hasty submission.`,
+        citations: [],
+        securityEvidence: []
+      };
+    }
+
+    // Follow-up: "What does HTTP mean?"
+    if (q.includes("what does http mean") || q.includes("what is http") || q.includes("meaning of http") || q === "http" || q === "what is https") {
+      return {
+        content: `**HTTP** stands for **Hypertext Transfer Protocol** — the foundational protocol used by web browsers and servers to communicate.\n\nIn the context of the link you asked about:\n- **HTTP (Plaintext)**: Data sent over HTTP travels in plain, unencrypted text. Anyone on the same network (e.g., public Wi-Fi or compromised router) can view data entered into the page, including usernames and passwords.\n- **HTTPS (Secure)**: Adds an **SSL/TLS encryption layer**, ensuring communication is encrypted between your browser and the server.\n\n*Important Security Caveat*: While HTTPS encrypts transit, having HTTPS does **not** prove a site is trustworthy or authentic, because attackers can also obtain free SSL certificates. However, entering banking credentials on an unencrypted plain HTTP site is a direct security hazard.`,
+        citations: [],
+        securityEvidence: []
+      };
+    }
+
     // Check if user specifically requested a full structured breakdown (Observed / Interpretation / Recommended Actions)
     const isFullReportRequest = 
       q.includes("full breakdown") || 
@@ -407,6 +474,12 @@ export class MockApiClient {
     if (evType === "url" || q.includes("website") || q.includes("url") || q.includes("domain") || q.includes("site") || q.includes("link")) {
       const domain = evidence?.extractedContext?.domainMetadata?.domain || evidence?.url || "secure-chase-auth-verify.xyz";
       const age = evidence?.extractedContext?.domainMetadata?.creationAge || "2 days ago";
+      const urlSecurityEvidence = [
+        `Suspicious domain (${domain} registered ${age})`,
+        "Generic TLD (.xyz) for financial institution",
+        "Credential harvesting form detected",
+        "Artificial urgency timer (5:00 expiration)"
+      ];
 
       // Q: "What is this website?"
       if (q.includes("what is this website") || q.includes("what is this site") || q.includes("what website") || q.includes("what site") || q.includes("what is this link") || q.includes("what is this")) {
@@ -422,7 +495,8 @@ Key technical facts:
 - **Page Presentation**: The interface presents an account login and authorization form with an artificial urgency prompt (*"Session expires in 05:00"*).
 
 **Safety Guidance**: Never enter passwords, One-Time Passwords (OTPs), card CVVs, or PINs on this page.`,
-          citations
+          citations,
+          securityEvidence: urlSecurityEvidence
         };
       }
 
@@ -445,12 +519,13 @@ Key technical facts:
 - **HTTPS Clarification**: Having HTTPS active only means that your connection is encrypted; it does not verify the authenticity of the site operator.
 
 **Important**: We never request or collect passwords, OTPs, or financial secrets. Keep your credentials private.`,
-          citations
+          citations,
+          securityEvidence: urlSecurityEvidence
         };
       }
 
       // Q: "What should I check before entering my payment details?"
-      if (q.includes("what should i check") || q.includes("before entering") || q.includes("before paying") || q.includes("check before") || q.includes("safe to pay")) {
+      if (q.includes("what should i check") || q.includes("before entering") || q.includes("before paying") || q.includes("check before") || q.includes("safe to pay") || q.includes("safe?")) {
         citations.push(MOCK_CITATIONS.owasp_domain);
         return {
           content: `Before entering payment details, debit/credit card numbers, or credentials on this or any unfamiliar page, check these essential security items:
@@ -467,7 +542,8 @@ Key technical facts:
 
 4. **Non-Negotiable Rule for Secrets**:
    - **Never enter one-time passwords (OTPs), card CVVs, ATM PINs, or online banking passwords** on pages accessed via third-party messages. Real banks will never ask you to disclose an OTP to cancel or verify an unauthorized transaction.`,
-          citations
+          citations,
+          securityEvidence: urlSecurityEvidence
         };
       }
     }
@@ -478,6 +554,11 @@ Key technical facts:
       const vpa = qr?.vpaOrAccount || "quickpay.muni.services@okaxis";
       const payee = qr?.payeeName || "CityMunicipalPay";
       const amount = qr?.amount || "₹120.00";
+      const qrSecurityEvidence = [
+        "Unverified consumer VPA handle (@okaxis) instead of municipal gateway",
+        "Arbitrary display name spoofing risk",
+        "Physical quishing adhesive overlay risk"
+      ];
 
       // Q: "What does this QR code contain?"
       if (q.includes("what does this qr") || q.includes("qr code contain") || q.includes("what is in this qr") || q.includes("qr contain") || q.includes("decoded") || q.includes("payload")) {
@@ -494,7 +575,8 @@ Key technical facts:
 - **Transaction Note**: \`${qr?.parsedFields?.["Transaction Note"] || "ParkingSlot44B"}\`
 
 **Summary**: Scanning this code prompts your payment app to immediately transfer ${amount} directly to the individual consumer VPA handle \`${vpa}\`.`,
-          citations
+          citations,
+          securityEvidence: qrSecurityEvidence
         };
       }
 
@@ -516,7 +598,8 @@ Key technical facts:
    - Inspect the physical parking meter: check if this QR code is a peelable sticker placed over the metal plate.
    - Pay using the city's official parking app, or use the coin/card slot on the parking machine.
    - Report the suspected overlay sticker to parking enforcement or the local transit authority.`,
-          citations
+          citations,
+          securityEvidence: qrSecurityEvidence
         };
       }
     }
@@ -540,7 +623,12 @@ Key technical facts:
    - **Do not download any APK files** or apps sent via SMS or chat.
    - Check your actual billing balance by logging into your utility provider's verified portal or mobile app.
    - Call the customer service hotline printed on your previous paper electricity bill to confirm your status.`,
-        citations
+        citations,
+        securityEvidence: [
+          "Personal 10-digit phone sender instead of verified alpha-header",
+          "Immediate same-day disconnection threat without statutory notice",
+          "Call-to-action directs to personal phone number"
+        ]
       };
     }
 
@@ -561,7 +649,12 @@ Key technical facts:
    - Do not pay any advance release or clearance fee.
    - Do not dispatch items or transfer property based on a buyer's screenshot.
    - Check your own bank account directly by logging into your official banking portal to see if funds have actually settled.`,
-        citations
+        citations,
+        securityEvidence: [
+          "Typography and layout misalignment on payment confirmation",
+          "Advance fee required to release alleged escrow hold",
+          "Unverified settlement status"
+        ]
       };
     }
 
@@ -578,7 +671,11 @@ Based on the evidence attached to this thread:
   - **A .xyz or other generic TLD alone does NOT prove that a website is malicious**; however, financial and government operations consistently rely on their authenticated primary root domains.
   - **Never disclose authentication secrets**: We strongly remind you never to enter or share OTPs, PINs, card CVVs, or online banking passwords.
 - **Next Steps**: If you have specific questions about any parameter (such as recipient handles, domain age, or safety verification steps), ask directly and I will inspect that specific aspect.`,
-      citations
+      citations,
+      securityEvidence: evidence ? [
+        "Unverified external payment request",
+        "Domain and recipient route authentication required"
+      ] : []
     };
   }
 }
