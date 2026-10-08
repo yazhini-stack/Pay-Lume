@@ -1,124 +1,505 @@
-# Paylume — Frontend
+# 🔐 Pay-Lume
 
-> **"Upload. Ask. Understand."**
+### Upload. Ask. Understand.
 
-Paylume is a multimodal RAG chatbot designed to help people understand suspicious payment-related content with clinical clarity and calm.
+**Pay-Lume** is a multimodal conversational AI cybersecurity assistant designed to help everyday users identify and understand potential payment scams.
 
----
+Users can **upload screenshots, images, QR codes, invoices, or paste suspicious URLs/messages**, then ask questions naturally. Pay-Lume analyzes the provided evidence, retrieves relevant cybersecurity knowledge from trusted sources, and generates an explainable, evidence-based response with recommended actions.
 
-## 🛡️ Product Model
+## 🚀 Live Demo
 
-Paylume is **question-driven**, not a scanner. Uploading evidence will **never** trigger an automatic verdict, risk score, red/green badge, or percentage gauge.
-
-- **Flow**: Attach evidence → User asks a question → Answer → Follow-up conversation
-- **Persistent Context**: Attached evidence (QR barcode, screenshot, URL, or pasted message) stays anchored to the thread for seamless follow-up questions.
-- **Three-Section Structured Answers**: Every response from Paylume is strictly separated into:
-  1. `Observed` — Factually what is in the evidence
-  2. `Interpretation` — Why those specific items matter
-  3. `Recommended actions` — Concrete steps the user should take
-- **Controlled Submission**: The send button remains disabled after attaching evidence until the user enters a question. Dynamic starter questions guide the user based on the evidence modality.
+**Pay-Lume — Live Application:**  
+https://paylume-frontend.onrender.com/
 
 ---
 
-## 🎨 Design Direction
+## 🎯 Problem
 
-Directly inspired by the bespoke **emerald & jade luminous glassmorphic aesthetic**:
-- **Background**: Deep obsidian & forest green canvas (`#060B08`) with ambient radial emerald glows.
-- **Translucent Glass Cards**: Frosted panels with `backdrop-blur` and subtle borders (`rgba(74, 222, 128, 0.15)`).
-- **Pill Badges & Buttons**: Radiant jade/mint gradient pill buttons (`#7CE698` to `#45B768`) and sleek status indicators.
-- **Cyber-Brackets QR Inspector**: Glowing corner brackets framing QR payloads, inspired directly by the reference visual.
-- **Amber Caution Notices**: Strictly reserved for privacy warnings and sensitive credential alerts — never used decoratively.
+Payment scams are becoming increasingly convincing.
 
----
+Users may receive:
 
-## 🚀 Getting Started
+- Suspicious QR codes
+- Fake bank or payment websites
+- Urgent electricity or utility messages
+- Fraudulent invoices and receipts
+- Fake escrow/payment requests
+- Phishing and smishing messages
+- Suspicious payment links
 
-### 1. Installation
-```bash
-npm install
-```
+The problem is that users often don't know **what exactly makes a message, link, QR code, or payment request suspicious**.
 
-### 2. Running Locally with Mock Backend
-By default, the application runs with `NEXT_PUBLIC_USE_MOCK_API=true` (defined in `.env.local`).
+Existing security tools can also be difficult for non-technical users to understand.
 
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+### 💡 Our Solution
 
-### 3. Pointing to Real FastAPI Backend
-To connect to your live FastAPI backend, adjust `.env.local`:
+Pay-Lume converts complex security analysis into a simple conversational experience.
 
-```env
-NEXT_PUBLIC_USE_MOCK_API=false
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+Instead of asking users to understand cybersecurity terminology, Pay-Lume lets them simply:
 
-The unified client in `lib/api/client.ts` automatically switches between the mock client and the real HTTP/SSE client with zero component changes.
+> **Upload → Ask → Understand**
 
 ---
 
-## 📁 Directory Structure
+## ✨ Key Features
 
-```
-├── app/
-│   ├── globals.css                # Custom theme tokens, cyber-brackets, glassmorphism
-│   ├── layout.tsx                 # Root layout with TanStack Query & dark mode
-│   ├── page.tsx                   # Landing page (hero shield, 3-step flow, 4 modalities)
-│   ├── providers.tsx              # QueryClientProvider & PrivacyGuardModal
-│   └── chat/
-│       ├── page.tsx               # Main chat workspace
-│       └── [conversationId]/     # Hydrated chat workspace for specific threads
-├── components/
-│   ├── chat/
-│   │   ├── ChatWorkspace.tsx      # Main 3-region workspace controller
-│   │   ├── Composer.tsx           # Unified input, clipboard paste, starter questions
-│   │   ├── ConversationSidebar.tsx# Collapsible conversation history, search, user profile
-│   │   ├── MessageItem.tsx        # 3-section structured layout with citation popovers
-│   │   ├── MessageThread.tsx      # Scrollable thread with auto-scroll & empty states
-│   │   ├── PrivacyGuardModal.tsx  # First-upload session privacy guard
-│   │   ├── RAGPipelineIndicator.tsx# Live stage progression indicator
-│   │   └── StreamingControls.tsx  # Stop generation & error retry
-│   ├── evidence/
-│   │   ├── EvidencePanel.tsx      # Persistent right drawer for attached evidence
-│   │   ├── EvidencePreview.tsx    # Cyber-bracket QR, URL card, image thumbnail, message text
-│   │   └── ExtractedContextDisclosure.tsx # "What Paylume extracted" OCR & payment parameters
-│   └── ui/
-│       ├── Badge.tsx              # Pill status badges
-│       ├── Button.tsx             # Jade pill buttons & frosted ghost buttons
-│       ├── Lightbox.tsx           # Image inspector with zoom and rotate
-│       ├── Modal.tsx              # Frosted dialog primitive
-│       ├── Skeleton.tsx           # Calm emerald pulse loaders
-│       └── Tooltip.tsx            # Accessible helper tooltips
-├── lib/
-│   ├── api/
-│   │   ├── client.ts              # Unified API client (Mock & FastAPI parity)
-│   │   └── mock/
-│   │       ├── fixtures.ts        # Preloaded scam fixtures & citations (CISA, FTC, OWASP)
-│   │       └── mock-client.ts     # Realistic SSE streaming & stage progression generator
-│   ├── hooks/
-│   │   ├── useAuth.ts             # Supabase Auth stub (Alex Thompson profile)
-│   │   └── usePrivacyGuard.ts     # Session privacy acknowledgment tracker
-│   ├── stores/
-│   │   └── useChatStore.ts        # Zustand active chat, streaming, and UI store
-│   └── utils.ts                   # Class merging & date formatters
-└── types/
-    ├── api.ts                     # SSE event types & endpoint request/response types
-    ├── chat.ts                    # Message, conversation, and citation definitions
-    └── evidence.ts                # Evidence modalities, OCR layers, and payment fields
+### 📸 Multimodal Evidence Analysis
+
+Users can provide different types of evidence:
+
+- Screenshots
+- Photos
+- QR codes
+- Payment messages
+- Invoices and receipts
+- Suspicious URLs
+- SMS/utility alerts
+
+### 🔍 Security Evidence Detection
+
+Pay-Lume identifies observable indicators such as:
+
+- Suspicious or lookalike domains
+- Unencrypted HTTP connections
+- Urgency and threat language
+- Credential or OTP requests
+- Suspicious payment instructions
+- Institutional impersonation
+- Unusual phone numbers
+- Nominal verification-fee requests
+- Other suspicious patterns
+
+The system distinguishes between **observed evidence** and **inferred security risk** instead of automatically labeling everything as a scam.
+
+### 🧠 RAG-Powered Cybersecurity Knowledge
+
+Pay-Lume uses Retrieval-Augmented Generation (RAG) to retrieve relevant cybersecurity information from a curated knowledge base.
+
+The knowledge base includes guidance from trusted sources such as:
+
+- CISA
+- FTC
+- OWASP
+- CERT-In
+
+The retrieved information provides authoritative context for the AI's response.
+
+### 💬 Conversational AI
+
+Users can ask follow-up questions naturally:
+
+> “Why is this suspicious?”
+
+> “What does HTTP mean?”
+
+> “What should I do now?”
+
+> “I already paid. What should I do?”
+
+Pay-Lume maintains conversation context so users don't have to repeatedly explain the situation.
+
+### 🔗 Secure URL Inspection
+
+URLs can be analyzed for characteristics such as:
+
+- HTTP/HTTPS
+- Redirect behavior
+- Domain characteristics
+- Suspicious domains
+- Lookalike patterns
+
+The backend includes **SSRF protection** to prevent requests to private or sensitive network addresses.
+
+### 📱 QR Code Analysis
+
+QR codes can be decoded to inspect their underlying payload and identify potentially suspicious payment or URL destinations.
+
+### 📝 OCR & Image Analysis
+
+Text can be extracted from uploaded images and screenshots for further security analysis.
+
+### 🚨 Already Paid?
+
+If a user has already made a payment, Pay-Lume provides a dedicated **Already Paid** workflow focused on damage-control and next steps rather than simply identifying the scam.
+
+### 🔒 Privacy & Security
+
+The application includes safeguards around sensitive evidence and follows an important rule:
+
+> **Pay-Lume never asks users to provide OTPs, PINs, passwords, or other authentication secrets.**
+
+---
+
+# 🏗️ System Architecture
+
+```text
+                         USER
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │   Next.js Frontend  │
+                │    Chat Interface    │
+                └──────────┬──────────┘
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │   FastAPI Backend   │
+                └──────────┬──────────┘
+                           │
+                    ┌──────┴──────┐
+                    │  LangGraph  │
+                    │  Workflow   │
+                    └──────┬──────┘
+                           │
+             ┌─────────────┼─────────────┐
+             ▼             ▼             ▼
+        QR Decoder        OCR       URL Inspection
+             │             │             │
+             └─────────────┼─────────────┘
+                           ▼
+                  Evidence Extraction
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │   RAG Retrieval  │
+                  └────────┬────────┘
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │ Supabase        │
+                  │ PostgreSQL      │
+                  │ + pgvector      │
+                  └────────┬────────┘
+                           │
+                    Relevant Knowledge
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │   Gemini AI     │
+                  │   Generation    │
+                  └────────┬────────┘
+                           │
+                           ▼
+                  Explainable Response
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │   Pay-Lume UI   │
+                  │ Chat + Insights │
+                  └─────────────────┘
 ```
 
 ---
 
-## 💡 What I Would Change & Next Evolutionary Steps
+# 🧠 How Pay-Lume Works
 
-Having built the complete end-to-end architecture according to the specification, here are the highest-impact enhancements recommended for future iterations:
+## 1. User provides evidence
 
-1. **Interactive Evidence Bounding Boxes**:
-   - In the evidence lightbox, overlay interactive bounding boxes on the screenshot pinpointing altered fonts or suspicious payment handles, allowing users to hover directly over the problematic area of a receipt.
-2. **Client-Side WASM QR Decoding & EXIF Scrubbing**:
-   - Incorporate a lightweight WebAssembly QR engine (`jsQR` or `@zxing/library`) in the browser to preview decoded payloads immediately before network upload, while automatically stripping sensitive EXIF geolocation metadata from uploaded phone screenshots.
-3. **Multi-Item Evidence Comparison (Side-by-Side Context)**:
-   - Extend the evidence panel to support secondary comparison attachments (e.g., comparing a suspicious SMS alongside the actual bank statement) within a single investigation thread.
-4. **Offline PWA & Device Action Integration**:
-   - Since users frequently review payment links and QR stickers while on the go on their mobile phones, packaging Paylume as a progressive web app (PWA) with quick "Share to Paylume" sheet integration from iOS / Android photos.
+The user uploads an image, screenshot, QR code, invoice, or enters a URL/message.
+
+## 2. Evidence processing
+
+The backend determines what type of evidence is available.
+
+Depending on the input, Pay-Lume can perform:
+
+- QR decoding
+- OCR
+- Image analysis
+- URL inspection
+- Security indicator extraction
+
+## 3. RAG retrieval
+
+The user's question is converted into an embedding.
+
+The embedding is compared against cybersecurity knowledge stored in **Supabase PostgreSQL with pgvector**.
+
+Relevant documents are retrieved using vector similarity search.
+
+## 4. AI reasoning
+
+Gemini receives the relevant evidence, retrieved cybersecurity context, and conversation history.
+
+It then generates a grounded response focused on the user's question.
+
+## 5. User receives the result
+
+The interface separates:
+
+**Attached Evidence**
+
+What the user provided.
+
+**Security Insights**
+
+What Pay-Lume discovered from that evidence.
+
+**Chat**
+
+The conversational explanation and answer.
+
+This keeps the interface informative without overwhelming the user.
+
+---
+
+# 🔄 LangGraph Workflow
+
+Pay-Lume uses a LangGraph-based state workflow:
+
+```text
+User Input
+    │
+    ▼
+Process Evidence
+    │
+    ├── QR Decoding
+    ├── OCR
+    ├── URL Inspection
+    └── Indicator Detection
+    │
+    ▼
+Retrieve RAG Context
+    │
+    ├── Generate Embedding
+    ├── Vector Search
+    └── Contextual Retrieval
+    │
+    ▼
+Generate Answer
+    │
+    └── Gemini
+    │
+    ▼
+Final Conversational Response
+```
+
+A shared workflow state carries information such as:
+
+- User question
+- Conversation history
+- Uploaded evidence
+- OCR output
+- QR payload
+- URL analysis
+- Security indicators
+- Retrieved documents
+- Generated response
+
+---
+
+# 🛠️ Technology Stack
+
+## Frontend
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- Zustand
+- TanStack React Query
+- React Markdown
+- React Dropzone
+- Lucide React
+- Web Speech API
+
+## Backend
+
+- Python
+- FastAPI
+- Uvicorn
+- Pydantic
+- HTTPX
+- BeautifulSoup
+- Pillow
+- zxing-cpp
+
+## AI / ML
+
+- Google Gemini
+- LangChain
+- LangGraph
+- Vector embeddings
+- Retrieval-Augmented Generation (RAG)
+
+## Database & Authentication
+
+- Supabase
+- PostgreSQL
+- pgvector
+- Supabase Authentication
+- Row Level Security (RLS)
+
+## Deployment
+
+- Render — Frontend
+- Render — Backend
+- Supabase — Database & Authentication
+- Google Gemini API — AI generation
+
+---
+
+# 🔐 Security Architecture
+
+Security is considered at multiple layers.
+
+### SSRF Protection
+
+The URL inspection service blocks requests to sensitive/private destinations, including:
+
+- Localhost
+- Private IPv4 ranges
+- IPv6 loopback
+- Cloud metadata endpoints
+
+Redirects are also inspected with a controlled redirect limit.
+
+### Credential Protection
+
+Pay-Lume is designed never to request:
+
+- OTPs
+- UPI PINs
+- Passwords
+- Banking credentials
+- Authentication secrets
+
+### Database Security
+
+Supabase Row Level Security helps ensure users can access only the data permitted for their account.
+
+---
+
+# 📚 Trusted Knowledge Sources
+
+Pay-Lume's RAG knowledge base is curated from authoritative cybersecurity guidance, including:
+
+- **CISA** — Cybersecurity and Infrastructure Security Agency
+- **FTC** — Federal Trade Commission
+- **OWASP** — Open Worldwide Application Security Project
+- **CERT-In** — Indian Computer Emergency Response Team
+
+These sources provide context for phishing, smishing, QR-code scams, malicious URLs, payment fraud, impersonation, and related threats.
+
+---
+
+# ⚡ Example Use Cases
+
+### QR Code Scam
+
+```text
+User:
+[Uploads a QR code]
+
+"Is this QR code safe to scan?"
+```
+
+Pay-Lume analyzes the QR payload and provides security guidance based on the extracted evidence and relevant cybersecurity knowledge.
+
+### Suspicious Bank Link
+
+```text
+User:
+http://secure-login-example.xyz/auth
+
+"Is this really my bank's website?"
+```
+
+Pay-Lume can inspect URL characteristics and explain suspicious indicators.
+
+### Utility Scam
+
+```text
+User:
+[Uploads electricity disconnection SMS screenshot]
+
+"Should I make this payment?"
+```
+
+Pay-Lume can identify urgency, impersonation, payment-related indicators, and provide recommended actions.
+
+### Already Paid
+
+```text
+User:
+"I already transferred the money. What should I do?"
+```
+
+Pay-Lume provides post-payment guidance focused on reducing potential damage and taking appropriate next steps.
+
+---
+
+# ☁️ Deployment Architecture
+
+Pay-Lume is deployed as separate frontend and backend services:
+
+```text
+                Internet
+                    │
+                    ▼
+       ┌────────────────────────┐
+       │  Render - Frontend     │
+       │  Next.js               │
+       └───────────┬────────────┘
+                   │
+                   ▼
+       ┌────────────────────────┐
+       │  Render - Backend      │
+       │  FastAPI               │
+       └──────┬─────────┬───────┘
+              │         │
+              ▼         ▼
+       ┌──────────┐  ┌──────────┐
+       │ Supabase │  │ Gemini   │
+       │ DB/Auth  │  │ API      │
+       └──────────┘  └──────────┘
+```
+
+The frontend communicates with the deployed FastAPI backend through the configured API endpoint.
+
+Sensitive credentials and API keys are supplied through environment variables rather than being committed to the repository.
+
+---
+
+# 📈 Future Scope
+
+Potential future improvements include:
+
+- Larger and continuously updated cybersecurity knowledge bases
+- Hybrid keyword + vector retrieval
+- Advanced retrieval reranking
+- More payment platforms and scam categories
+- Improved multilingual support
+- Threat-intelligence integrations
+- Automated domain reputation analysis
+- More advanced fraud-pattern correlation
+- Production-scale observability and monitoring
+- Additional post-payment recovery workflows
+
+---
+
+# 🎯 Project Vision
+
+Pay-Lume aims to make cybersecurity assistance understandable to everyone.
+
+Instead of simply saying:
+
+> **“This is a scam.”**
+
+Pay-Lume focuses on explaining:
+
+> **What was observed → Why it matters → What the user should do next.**
+
+The goal is to help users make safer decisions **before they pay, scan, click, or share sensitive information.**
+
+---
+
+## 👩‍💻 Project
+
+**Pay-Lume — Multimodal Conversational AI Cybersecurity Assistant**
+
+**Tagline:**  
+### Upload. Ask. Understand.
+
+**Live Demo:**  
+https://paylume-frontend.onrender.com/
