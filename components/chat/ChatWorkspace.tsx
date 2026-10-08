@@ -11,16 +11,11 @@ import { Composer } from "./Composer";
 import { EvidencePanel } from "@/components/evidence/EvidencePanel";
 import { AlreadyPaidModal } from "./AlreadyPaidModal";
 import { 
-  Shield, 
   PanelRightClose, 
   PanelRightOpen, 
-  Menu,
-  FileSearch,
-  Sparkles,
-  WifiOff
+  Menu
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { MOCK_PRELOADED_CONVERSATIONS } from "@/lib/api/mock/fixtures";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 
 interface ChatWorkspaceProps {

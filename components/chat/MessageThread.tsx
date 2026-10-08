@@ -12,7 +12,16 @@ import {
   ArrowDown, 
   WifiOff, 
   AlertCircle, 
-  Sparkles
+  Sparkles,
+  Upload,
+  HelpCircle,
+  ShieldCheck,
+  ImageIcon,
+  QrCode,
+  Globe,
+  MessageSquare,
+  Receipt,
+  Mic
 } from "lucide-react";
 
 interface MessageThreadProps {
@@ -93,24 +102,142 @@ export function MessageThread({
             <MessageItemSkeleton />
           </div>
         ) : messages.length === 0 && !isStreaming ? (
-          // Empty state: onboarding cues and sample scenarios
-          <div className="h-full flex flex-col items-center justify-center text-center max-w-xl mx-auto py-12 space-y-6">
-            <div className="relative">
-              <div className="h-16 w-16 rounded-3xl bg-gradient-to-br from-[#2d7850] to-[#0c2215] border border-emerald-500/30 flex items-center justify-center text-emerald-300 shadow-[0_0_35px_rgba(45,120,80,0.35)]">
-                <Shield className="h-8 w-8" />
+          // Refined Homepage Empty State
+          <div className="min-h-full flex flex-col items-center justify-center text-center max-w-3xl mx-auto py-6 sm:py-8 space-y-7 sm:space-y-8 select-none">
+            {/* Hero Section */}
+            <div className="flex flex-col items-center space-y-3.5 max-w-2xl">
+              {/* Luminous Emerald Shield Badge */}
+              <div className="relative mb-1">
+                <div className="h-16 w-16 rounded-3xl bg-gradient-to-br from-[#2d7850] to-[#0c2215] border border-emerald-500/30 flex items-center justify-center text-emerald-300 shadow-[0_0_35px_rgba(45,120,80,0.35)]">
+                  <Shield className="h-8 w-8" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-[#060b08] border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-[10px]">
+                  <Sparkles className="h-3 w-3" />
+                </div>
               </div>
-              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-[#060b08] border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-[10px]">
-                <Sparkles className="h-3 w-3" />
+
+              {/* Main Heading */}
+              <h1 className="text-2xl sm:text-3xl font-semibold text-emerald-100 tracking-tight">
+                Upload. Ask. Understand.
+              </h1>
+
+              {/* Primary Supporting Text */}
+              <p className="text-sm sm:text-[15px] text-zinc-300 leading-relaxed max-w-2xl font-normal">
+                Pay-Lume helps you inspect suspicious payment requests, QR codes, SMS alerts, invoices, and links — using AI-powered analysis and security evidence to help you understand what’s really happening.
+              </p>
+
+              {/* Secondary Smaller Supporting Line */}
+              <p className="text-xs sm:text-sm text-zinc-400 leading-normal max-w-lg">
+                Upload a screenshot or photo, paste a suspicious link or message, and ask your question.
+              </p>
+
+              {/* Trust & Action Statement */}
+              <div className="pt-1">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/25 text-emerald-300 text-xs font-medium shadow-sm tracking-wide">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Know before you pay.</span>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <h2 className="text-xl sm:text-2xl font-semibold text-emerald-100 tracking-tight">
-                Upload. Ask. Understand.
-              </h2>
-              <p className="text-sm text-zinc-400 leading-relaxed max-w-md">
-                Paylume helps you inspect suspicious payment requests, QR barcodes, SMS alerts, and invoices with clinical clarity.
-              </p>
+            {/* How Pay-Lume Works Section */}
+            <div className="w-full space-y-3 pt-1">
+              <div className="text-center">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-emerald-400/90">
+                  How Pay-Lume works
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-left">
+                {/* 01 — Upload */}
+                <div className="p-4 rounded-2xl bg-[#09150d]/80 border border-emerald-500/15 hover:border-emerald-500/30 hover:bg-[#0c1d12]/90 transition-all space-y-2 backdrop-blur-sm group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-semibold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/25">
+                      01
+                    </span>
+                    <Upload className="h-4 w-4 text-emerald-400/70 group-hover:text-emerald-300 transition-colors" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-emerald-100 group-hover:text-emerald-200">
+                    Upload
+                  </h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Add a screenshot, photo, QR code, invoice, suspicious message, or link.
+                  </p>
+                </div>
+
+                {/* 02 — Ask */}
+                <div className="p-4 rounded-2xl bg-[#09150d]/80 border border-emerald-500/15 hover:border-emerald-500/30 hover:bg-[#0c1d12]/90 transition-all space-y-2 backdrop-blur-sm group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-semibold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/25">
+                      02
+                    </span>
+                    <HelpCircle className="h-4 w-4 text-emerald-400/70 group-hover:text-emerald-300 transition-colors" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-emerald-100 group-hover:text-emerald-200">
+                    Ask
+                  </h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Ask Pay-Lume whether the content looks safe, suspicious, or potentially fraudulent.
+                  </p>
+                </div>
+
+                {/* 03 — Understand */}
+                <div className="p-4 rounded-2xl bg-[#09150d]/80 border border-emerald-500/15 hover:border-emerald-500/30 hover:bg-[#0c1d12]/90 transition-all space-y-2 backdrop-blur-sm group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-semibold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/25">
+                      03
+                    </span>
+                    <ShieldCheck className="h-4 w-4 text-emerald-400/70 group-hover:text-emerald-300 transition-colors" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-emerald-100 group-hover:text-emerald-200">
+                    Understand
+                  </h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Get detected security indicators, supporting evidence, and a recommended action.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* What You Can Check Section */}
+            <div className="w-full space-y-2.5 pt-0.5">
+              <div className="text-center">
+                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400/80">
+                  What you can check
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#09150d]/70 border border-emerald-500/15 text-xs text-zinc-300 font-medium hover:border-emerald-500/30 transition-colors">
+                  <ImageIcon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>Screenshots & Photos</span>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#09150d]/70 border border-emerald-500/15 text-xs text-zinc-300 font-medium hover:border-emerald-500/30 transition-colors">
+                  <QrCode className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>QR Codes</span>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#09150d]/70 border border-emerald-500/15 text-xs text-zinc-300 font-medium hover:border-emerald-500/30 transition-colors">
+                  <Globe className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>Links & URLs</span>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#09150d]/70 border border-emerald-500/15 text-xs text-zinc-300 font-medium hover:border-emerald-500/30 transition-colors">
+                  <MessageSquare className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>Messages & SMS</span>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#09150d]/70 border border-emerald-500/15 text-xs text-zinc-300 font-medium hover:border-emerald-500/30 transition-colors">
+                  <Receipt className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>Payment Invoices</span>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#09150d]/70 border border-emerald-500/15 text-xs text-zinc-300 font-medium hover:border-emerald-500/30 transition-colors">
+                  <Mic className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>Voice Questions</span>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
