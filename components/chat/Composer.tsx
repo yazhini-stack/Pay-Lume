@@ -27,6 +27,10 @@ import {
 import { EvidenceType, EvidencePayload } from "@/types/evidence";
 import { cn } from "@/lib/utils";
 
+import { useSpeechToText } from "@/lib/speech/useSpeechToText";
+import { useTextToSpeech } from "@/lib/speech/useTextToSpeech";
+import { Check } from "lucide-react";
+
 interface ComposerProps {
   onSendMessage: (question: string) => void;
   disabled?: boolean;
@@ -36,12 +40,23 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
   const [inputText, setInputText] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [detectedPastedText, setDetectedPastedText] = useState<string | null>(null);
-  const [isListening, setIsListening] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<any>(null);
+
+  const {
+    status: sttStatus,
+    interimTranscript,
+    error: sttError,
+    errorType: sttErrorType,
+    isSupported: isSttSupported,
+    startListening,
+    stopListening,
+    cancelListening,
+    clearError: clearSttError
+  } = useSpeechToText();
+
+  const { stop: stopTts } = useTextToSpeech();
 
   const {
     activeEvidence,
@@ -71,87 +86,17 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
     }
   }, [prefilledQuestion, setPrefilledQuestion]);
 
-  // Cleanup speech recognition on unmount
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {}
+  const handleStartVoice = () => {
+    stopTts();
+    startListening(
+      inputText,
+      (compositeText) => {
+        setInputText(compositeText);
+      },
+      () => {
+        stopTts();
       }
-    };
-  }, []);
-
-  // Web Speech API handler
-  const startListening = () => {
-    setVoiceError(null);
-    const SpeechRecognition = 
-      typeof window !== "undefined" 
-        ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
-        : null;
-
-    if (!SpeechRecognition) {
-      setVoiceError("Voice input is not supported by your browser. Please use Chrome, Edge, or Safari.");
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = typeof navigator !== "undefined" ? (navigator.language || "en-US") : "en-US";
-
-      const baseText = inputText.trim();
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setVoiceError(null);
-      };
-
-      recognition.onresult = (event: any) => {
-        let transcript = "";
-        for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        if (transcript) {
-          const combined = baseText ? `${baseText} ${transcript}` : transcript;
-          setInputText(combined);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn("Speech recognition error:", event.error);
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setVoiceError("Microphone access was denied. Please allow microphone permissions in your browser.");
-        } else if (event.error === "network") {
-          setVoiceError("Network connectivity issue with speech recognition service.");
-        } else if (event.error !== "no-speech") {
-          setVoiceError(`Voice input error: ${event.error}`);
-        }
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err: any) {
-      console.warn("Could not start speech recognition:", err);
-      setIsListening(false);
-      setVoiceError("Could not start microphone. Please check your browser permissions.");
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
-      recognitionRef.current = null;
-    }
-    setIsListening(false);
+    );
   };
 
   // Resize textarea automatically
@@ -328,20 +273,41 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
         </div>
       )}
 
-      {/* Voice Recognition Error Banner */}
-      {voiceError && (
-        <div className="p-3 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-200 text-xs flex items-center justify-between gap-3 animate-in fade-in">
+      {/* Voice Recognition Error Banner with Retry */}
+      {sttError && (
+        <div
+          className="p-3.5 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-200 text-xs flex items-center justify-between gap-3 animate-in fade-in"
+          role="alert"
+          aria-live="assertive"
+        >
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0" />
-            <span>{voiceError}</span>
+            <span className="leading-snug">{sttError}</span>
           </div>
-          <button
-            onClick={() => setVoiceError(null)}
-            className="p-1 text-zinc-400 hover:text-white"
-            aria-label="Dismiss voice error"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {sttErrorType !== "unsupported" && (
+              <button
+                type="button"
+                onClick={() => {
+                  clearSttError();
+                  handleStartVoice();
+                }}
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-amber-900/60 hover:bg-amber-800 text-amber-100 font-medium transition-colors"
+                title="Retry voice input"
+              >
+                <RotateCw className="h-3 w-3" />
+                <span>Retry</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={clearSttError}
+              className="p-1 text-zinc-400 hover:text-white"
+              aria-label="Dismiss voice error"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -439,6 +405,44 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
           </div>
         )}
 
+        {/* Live Interim Transcription Bar while Listening */}
+        {sttStatus === "listening" && (
+          <div className="mb-2 px-3 py-2 rounded-2xl bg-red-950/50 border border-red-500/40 text-xs flex items-center justify-between gap-2.5 animate-in fade-in">
+            <div className="flex items-center gap-2 overflow-hidden flex-1">
+              <span className="flex items-end gap-0.5 h-3 shrink-0">
+                <span className="w-0.5 h-2 bg-red-400 animate-pulse" />
+                <span className="w-0.5 h-3.5 bg-red-300 animate-pulse delay-75" />
+                <span className="w-0.5 h-1.5 bg-red-500 animate-pulse delay-150" />
+              </span>
+              <span className="font-semibold text-red-300 text-[11px] shrink-0">Live voice:</span>
+              <span className="text-zinc-200 italic truncate text-[11px] font-sans">
+                {interimTranscript || "Listening... speak now"}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={cancelListening}
+                className="px-2.5 py-1 rounded-xl bg-black/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-[11px] font-medium transition-colors border border-white/10"
+                title="Cancel voice input (discard transcript)"
+                aria-label="Cancel voice input"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={stopListening}
+                className="flex items-center gap-1 px-3 py-1 rounded-xl bg-red-900/80 hover:bg-red-800 text-white text-[11px] font-semibold transition-colors shadow-sm"
+                title="Finish and keep transcript in composer"
+                aria-label="Finish and keep transcript"
+              >
+                <Check className="h-3 w-3 stroke-[2.5]" />
+                <span>Done</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Text Area and Microphone Button */}
         <div className="relative flex items-center gap-2">
           <textarea
@@ -457,26 +461,42 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
             className="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none max-h-36 py-2 px-2"
           />
 
-          {/* Voice Input Button: Normal 🎤 vs Recording 🔴 Listening... */}
-          {isListening ? (
+          {/* Voice Input Button: States for Idle, Listening, Processing, Success */}
+          {sttStatus === "listening" ? (
             <button
               type="button"
               onClick={stopListening}
-              aria-label="Stop voice input recording"
-              title="Stop listening (Click to finish)"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 text-red-200 hover:bg-red-900 text-xs font-semibold shrink-0 transition-all animate-pulse"
+              aria-label="Stop recording voice input"
+              title="Stop listening (Insert transcript)"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 text-red-200 hover:bg-red-900 text-xs font-semibold shrink-0 transition-all shadow-lg animate-pulse"
             >
               <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
-              <span>Listening...</span>
-              <Square className="h-3 w-3 fill-current ml-0.5" />
+              <span>Done</span>
+              <Check className="h-3 w-3 stroke-[2.5] ml-0.5" />
             </button>
+          ) : sttStatus === "processing" ? (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs font-medium shrink-0 animate-pulse"
+              title="Finalizing speech recognition"
+            >
+              <RotateCw className="h-3 w-3 animate-spin" />
+              <span>Processing</span>
+            </div>
+          ) : sttStatus === "success" ? (
+            <div
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-950/90 border border-emerald-400/50 text-emerald-200 text-xs font-semibold shrink-0 animate-in fade-in"
+              title="Speech transcribed successfully"
+            >
+              <Check className="h-3.5 w-3.5 text-emerald-400 stroke-[2.5]" />
+              <span className="text-[11px]">Transcribed</span>
+            </div>
           ) : (
             <button
               type="button"
-              onClick={startListening}
+              onClick={handleStartVoice}
               disabled={disabled || isStreaming}
               aria-label="Start voice input"
-              title="Voice input: Speak your question"
+              title={isSttSupported ? "Voice input: Speak your question" : "Voice input not supported in this browser"}
               className="p-2 rounded-2xl text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/60 border border-transparent hover:border-emerald-500/30 transition-all shrink-0"
             >
               <Mic className="h-4 w-4" />

@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/auth/AuthGuard";
+import { VoiceSettingsPopover } from "./VoiceSettingsPopover";
+import { useTextToSpeech } from "@/lib/speech/useTextToSpeech";
+import { useSpeechStore } from "@/lib/stores/useSpeechStore";
 
 interface ChatWorkspaceProps {
   initialConversationId?: string;
@@ -51,6 +54,8 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
     closeAlreadyPaidModal,
     setPrefilledQuestion
   } = useChatStore();
+
+  const { speak: ttsSpeak, stop: ttsStop } = useTextToSpeech();
 
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
   const [activeSecurityEvidence, setActiveSecurityEvidence] = useState<string[]>([]);
@@ -145,11 +150,13 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
 
   // Handle selecting past conversation
   const handleSelectConversation = (id: string) => {
+    ttsStop();
     router.push(`/chat/${id}`);
   };
 
   // Handle new chat
   const handleNewChat = () => {
+    ttsStop();
     setActiveConversationId(null);
     setActiveEvidence(null);
     setCurrentMessages([]);
@@ -262,6 +269,11 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
 
             // Turn off streaming AFTER the assistant message has been committed to UI state
             resetStreaming();
+
+            // Auto-read response if user explicitly enabled auto-read in voice settings
+            if (useSpeechStore.getState().autoReadEnabled) {
+              ttsSpeak(asstMsg.id, asstMsg);
+            }
           } else if (event.type === "error") {
             setStreamError(event.data.message);
             setStreaming(false);
@@ -311,8 +323,10 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
               </div>
             </div>
 
-            {/* Right toggle button for Evidence Panel */}
+            {/* Right toolbar: Voice Settings & Evidence Panel Toggle */}
             <div className="flex items-center gap-2">
+              <VoiceSettingsPopover />
+
               <button
                 onClick={() => toggleEvidencePanel()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-900/60 text-xs font-medium transition-colors"

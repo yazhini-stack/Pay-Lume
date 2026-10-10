@@ -11,13 +11,15 @@ import {
   ExternalLink, 
   Copy, 
   Check, 
-  ChevronDown, 
-  ChevronUp,
-  Bookmark,
+  Volume2,
+  Pause,
+  Play,
+  Square
 } from "lucide-react";
 import { formatTimestamp, cn, getSafeExternalUrl } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useTextToSpeech } from "@/lib/speech/useTextToSpeech";
 
 interface MessageItemProps {
   message: Message;
@@ -27,7 +29,22 @@ export function MessageItem({ message }: MessageItemProps) {
   const [copied, setCopied] = useState(false);
   const [activePopoverCitation, setActivePopoverCitation] = useState<Citation | null>(null);
 
+  const {
+    isTtsSupported,
+    activeMessageId,
+    playbackStatus,
+    speechRate,
+    setSpeechRate,
+    speak,
+    pause,
+    resume,
+    stop
+  } = useTextToSpeech();
+
   const isUser = message.role === "user";
+  const isThisPlaying = activeMessageId === message.id && playbackStatus === "playing";
+  const isThisPaused = activeMessageId === message.id && playbackStatus === "paused";
+  const isThisActive = isThisPlaying || isThisPaused;
 
   const handleCopy = () => {
     let text = "";
@@ -110,6 +127,16 @@ export function MessageItem({ message }: MessageItemProps) {
   const hasActions = Boolean(sections.actions);
   const citations = message.citations || [];
 
+  const handleTogglePlayback = () => {
+    if (isThisPlaying) {
+      pause();
+    } else if (isThisPaused) {
+      resume();
+    } else {
+      speak(message.id, message);
+    }
+  };
+
   return (
     <div className="space-y-4 max-w-3xl mr-auto animate-in fade-in duration-300">
       {/* Bot Header */}
@@ -129,6 +156,41 @@ export function MessageItem({ message }: MessageItemProps) {
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* TTS Read-Aloud Button */}
+          {isTtsSupported && (
+            <button
+              onClick={handleTogglePlayback}
+              className={cn(
+                "p-1.5 rounded-lg transition-colors flex items-center justify-center",
+                isThisActive
+                  ? "bg-emerald-900/60 text-emerald-200 border border-emerald-400/40"
+                  : "text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/40"
+              )}
+              title={
+                isThisPlaying
+                  ? "Pause read-aloud"
+                  : isThisPaused
+                  ? "Resume read-aloud"
+                  : "Read response aloud"
+              }
+              aria-label={
+                isThisPlaying
+                  ? "Pause read-aloud"
+                  : isThisPaused
+                  ? "Resume read-aloud"
+                  : "Read response aloud"
+              }
+            >
+              {isThisPlaying ? (
+                <Pause className="h-4 w-4 text-emerald-400" />
+              ) : isThisPaused ? (
+                <Play className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <Volume2 className="h-4 w-4" />
+              )}
+            </button>
+          )}
+
           <button
             onClick={handleCopy}
             className="p-1.5 text-zinc-400 hover:text-emerald-300 rounded-lg hover:bg-emerald-950/40 transition-colors"
@@ -138,6 +200,76 @@ export function MessageItem({ message }: MessageItemProps) {
           </button>
         </div>
       </div>
+
+      {/* Dynamic TTS Playback Status Banner when Active */}
+      {isThisActive && (
+        <div className="flex items-center justify-between px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-[#0a180f] to-[#08120b] border border-emerald-500/35 text-xs text-emerald-200 shadow-md animate-in fade-in">
+          <div className="flex items-center gap-2">
+            {isThisPlaying ? (
+              <div className="flex items-center gap-1.5">
+                <span className="flex items-end gap-0.5 h-3">
+                  <span className="w-0.5 h-2 bg-emerald-400 animate-pulse" />
+                  <span className="w-0.5 h-3 bg-emerald-300 animate-pulse delay-75" />
+                  <span className="w-0.5 h-1.5 bg-emerald-500 animate-pulse delay-150" />
+                  <span className="w-0.5 h-3 bg-emerald-400 animate-pulse delay-100" />
+                </span>
+                <span className="text-[11px] font-medium text-emerald-300">
+                  Reading response aloud...
+                </span>
+              </div>
+            ) : (
+              <span className="text-[11px] font-medium text-amber-300 flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                Playback paused
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {/* Speed toggle: 0.8x -> 1x -> 1.25x -> 1.5x */}
+            <button
+              onClick={() => {
+                const rates = [0.8, 1.0, 1.25, 1.5];
+                const nextIdx = (rates.indexOf(speechRate) + 1) % rates.length;
+                setSpeechRate(rates[nextIdx]);
+              }}
+              className="px-2 py-0.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-[10px] font-mono font-medium text-emerald-300 transition-colors"
+              title="Change speech rate"
+            >
+              {speechRate}x
+            </button>
+
+            {isThisPlaying ? (
+              <button
+                onClick={pause}
+                className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
+                title="Pause speech"
+                aria-label="Pause speech"
+              >
+                <Pause className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <button
+                onClick={resume}
+                className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
+                title="Resume speech"
+                aria-label="Resume speech"
+              >
+                <Play className="h-3.5 w-3.5" />
+              </button>
+            )}
+
+            <button
+              onClick={stop}
+              className="p-1 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-colors"
+              title="Stop playback"
+              aria-label="Stop playback"
+            >
+              <Square className="h-3 w-3 fill-current" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* DIRECT QUESTION-DRIVEN CONTENT ANSWER */}
       {message.content && (
