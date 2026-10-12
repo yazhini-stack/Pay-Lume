@@ -198,6 +198,7 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
 
   const handleSend = () => {
     if (!inputText.trim() || disabled || isStreaming) return;
+    stopTts();
     const question = inputText.trim();
     setInputText("");
     onSendMessage(question);

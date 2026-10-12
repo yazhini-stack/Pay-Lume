@@ -178,6 +178,7 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
   // Handle sending a message and streaming the 3-section answer
   const handleSendMessage = async (question: string) => {
     if (!question.trim() || isStreaming) return;
+    ttsStop();
 
     let convId = activeConversationId;
 

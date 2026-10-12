@@ -24,7 +24,21 @@ export function formatMarkdownForSpeech(markdown: string): string {
   // 4. Handle Markdown links: [Link Title](https://...) -> Link Title
   text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
 
-  // 5. Handle standalone URLs: replace with readable spoken hostname
+  // 5. Convert security icons / markers to spoken phrases
+  text = text
+    .replace(/🚨/g, " Urgent warning: ")
+    .replace(/⚠️/g, " Warning: ")
+    .replace(/🔒/g, " Secure: ")
+    .replace(/🛡️/g, " Protection note: ")
+    .replace(/✅/g, " Verified: ")
+    .replace(/❌/g, " Not recommended: ")
+    .replace(/\[x\]/gi, " Completed: ")
+    .replace(/\[ \]/g, " Action required: ");
+
+  // 6. Handle CVE identifiers: CVE-2024-1234 -> CVE 2024 dash 1234
+  text = text.replace(/CVE-(\d{4})-(\d+)/gi, "CVE $1 dash $2");
+
+  // 7. Handle standalone URLs: replace with readable spoken hostname
   text = text.replace(/(https?:\/\/[^\s<>)"]+)/g, (match) => {
     try {
       const parsed = new URL(match);
@@ -36,26 +50,26 @@ export function formatMarkdownForSpeech(markdown: string): string {
     }
   });
 
-  // 6. Remove HTML tags if present (e.g., <br/>, <span...>)
+  // 8. Remove HTML tags if present (e.g., <br/>, <span...>)
   text = text.replace(/<\/?[a-zA-Z0-9]+(?:\s+[^>]*?)?\/?>/g, " ");
 
-  // 7. Strip Markdown table borders and headers (e.g. |---|---|)
+  // 9. Strip Markdown table borders and headers (e.g. |---|---|)
   text = text.replace(/\|[\s-:]+\|[\s-:|]*/g, " ");
   text = text.replace(/\|/g, ", ");
 
-  // 8. Headers (# Header, ## Subheader) -> Header with natural pause
+  // 10. Headers (# Header, ## Subheader) -> Header with natural pause
   text = text.replace(/^#{1,6}\s+(.+)$/gm, "$1. ");
 
-  // 9. Blockquotes (> quote) -> quote
+  // 11. Blockquotes (> quote) -> quote
   text = text.replace(/^>\s*(.+)$/gm, "$1. ");
 
-  // 10. List items
+  // 12. List items
   // Unordered list items (* or - or +)
   text = text.replace(/^[\s]*[-*+]\s+(.+)$/gm, "$1. ");
   // Ordered list items (1. 2.)
   text = text.replace(/^[\s]*(\d+)\.\s+(.+)$/gm, "$1. $2. ");
 
-  // 11. Bold, italics, strikethrough
+  // 13. Bold, italics, strikethrough
   text = text.replace(/\*\*\*([^*]+)\*\*\*/g, "$1");
   text = text.replace(/\*\*([^*]+)\*\*/g, "$1");
   text = text.replace(/\*([^*]+)\*/g, "$1");
@@ -64,7 +78,7 @@ export function formatMarkdownForSpeech(markdown: string): string {
   text = text.replace(/_([^_]+)_/g, "$1");
   text = text.replace(/~~([^~]+)~~/g, "$1");
 
-  // 12. Normalize whitespace, remove double periods or weird punctuation
+  // 14. Normalize whitespace, remove double periods or weird punctuation
   text = text
     .replace(/[ \t]+/g, " ")
     .replace(/\s*\.\s*\./g, ".")
@@ -97,14 +111,14 @@ export function prepareSpeechText(
     if (message.sections.observed && message.sections.observed.trim()) {
       const observedText = formatMarkdownForSpeech(message.sections.observed);
       if (observedText) {
-        parts.push(`Observed: ${observedText}`);
+        parts.push(`Observed evidence: ${observedText}`);
       }
     }
 
     if (message.sections.interpretation && message.sections.interpretation.trim()) {
       const interpText = formatMarkdownForSpeech(message.sections.interpretation);
       if (interpText) {
-        parts.push(`Interpretation: ${interpText}`);
+        parts.push(`Security assessment: ${interpText}`);
       }
     }
 
@@ -121,7 +135,7 @@ export function prepareSpeechText(
 
 /**
  * Splits long text into natural sentence-sized chunks (< 160 characters when possible).
- * This prevents the well-known Chrome/Edge SpeechSynthesis 15-second speech stall bug.
+ * Enables pipelined chunk generation for neural TTS and prevents Chrome 15-second speech stall.
  */
 export function splitSpeechChunks(text: string, maxChunkLength = 160): string[] {
   if (!text || text.trim().length === 0) return [];

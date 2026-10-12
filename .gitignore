@@ -58,3 +58,12 @@ __pycache__/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# TTS & Neural model binaries and caches
+*.onnx
+*.onnx_data
+*.bin
+*.wasm
+models/
+.cache/
+kokoro/

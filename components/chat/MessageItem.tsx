@@ -14,7 +14,9 @@ import {
   Volume2,
   Pause,
   Play,
-  Square
+  Square,
+  Loader2,
+  Sparkles
 } from "lucide-react";
 import { formatTimestamp, cn, getSafeExternalUrl } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -35,6 +37,9 @@ export function MessageItem({ message }: MessageItemProps) {
     playbackStatus,
     speechRate,
     setSpeechRate,
+    playbackEngine,
+    neuralProgress,
+    fallbackNotice,
     speak,
     pause,
     resume,
@@ -43,8 +48,9 @@ export function MessageItem({ message }: MessageItemProps) {
 
   const isUser = message.role === "user";
   const isThisPlaying = activeMessageId === message.id && playbackStatus === "playing";
+  const isThisLoading = activeMessageId === message.id && playbackStatus === "loading";
   const isThisPaused = activeMessageId === message.id && playbackStatus === "paused";
-  const isThisActive = isThisPlaying || isThisPaused;
+  const isThisActive = isThisPlaying || isThisLoading || isThisPaused;
 
   const handleCopy = () => {
     let text = "";
@@ -160,6 +166,7 @@ export function MessageItem({ message }: MessageItemProps) {
           {isTtsSupported && (
             <button
               onClick={handleTogglePlayback}
+              disabled={isThisLoading}
               className={cn(
                 "p-1.5 rounded-lg transition-colors flex items-center justify-center",
                 isThisActive
@@ -167,21 +174,27 @@ export function MessageItem({ message }: MessageItemProps) {
                   : "text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/40"
               )}
               title={
-                isThisPlaying
+                isThisLoading
+                  ? "Preparing neural audio..."
+                  : isThisPlaying
                   ? "Pause read-aloud"
                   : isThisPaused
                   ? "Resume read-aloud"
                   : "Read response aloud"
               }
               aria-label={
-                isThisPlaying
+                isThisLoading
+                  ? "Preparing neural audio"
+                  : isThisPlaying
                   ? "Pause read-aloud"
                   : isThisPaused
                   ? "Resume read-aloud"
                   : "Read response aloud"
               }
             >
-              {isThisPlaying ? (
+              {isThisLoading ? (
+                <Loader2 className="h-4 w-4 text-emerald-400 animate-spin" />
+              ) : isThisPlaying ? (
                 <Pause className="h-4 w-4 text-emerald-400" />
               ) : isThisPaused ? (
                 <Play className="h-4 w-4 text-emerald-400" />
@@ -203,71 +216,97 @@ export function MessageItem({ message }: MessageItemProps) {
 
       {/* Dynamic TTS Playback Status Banner when Active */}
       {isThisActive && (
-        <div className="flex items-center justify-between px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-[#0a180f] to-[#08120b] border border-emerald-500/35 text-xs text-emerald-200 shadow-md animate-in fade-in">
-          <div className="flex items-center gap-2">
-            {isThisPlaying ? (
-              <div className="flex items-center gap-1.5">
-                <span className="flex items-end gap-0.5 h-3">
-                  <span className="w-0.5 h-2 bg-emerald-400 animate-pulse" />
-                  <span className="w-0.5 h-3 bg-emerald-300 animate-pulse delay-75" />
-                  <span className="w-0.5 h-1.5 bg-emerald-500 animate-pulse delay-150" />
-                  <span className="w-0.5 h-3 bg-emerald-400 animate-pulse delay-100" />
+        <div className="flex flex-col gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-[#0a180f] to-[#08120b] border border-emerald-500/35 text-xs text-emerald-200 shadow-md animate-in fade-in">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {isThisLoading ? (
+                <div className="flex items-center gap-2 text-emerald-300">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                  <span className="text-[11px] font-medium">
+                    {neuralProgress !== null && neuralProgress > 0 && neuralProgress < 100
+                      ? `Downloading neural model (${neuralProgress}%)...`
+                      : "Preparing neural speech..."}
+                  </span>
+                </div>
+              ) : isThisPlaying ? (
+                <div className="flex items-center gap-2">
+                  <span className="flex items-end gap-0.5 h-3">
+                    <span className="w-0.5 h-2 bg-emerald-400 animate-pulse" />
+                    <span className="w-0.5 h-3 bg-emerald-300 animate-pulse delay-75" />
+                    <span className="w-0.5 h-1.5 bg-emerald-500 animate-pulse delay-150" />
+                    <span className="w-0.5 h-3 bg-emerald-400 animate-pulse delay-100" />
+                  </span>
+                  <span className="text-[11px] font-medium text-emerald-300">
+                    {playbackEngine === "neural" ? "Neural AI reading response..." : "Reading response aloud..."}
+                  </span>
+                  {playbackEngine === "neural" ? (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-mono hidden sm:inline-flex items-center gap-1">
+                      <Sparkles className="h-2.5 w-2.5 text-emerald-400" /> Kokoro 82M
+                    </span>
+                  ) : (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 font-mono hidden sm:inline-block">
+                      Browser TTS
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="text-[11px] font-medium text-amber-300 flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  Playback paused
                 </span>
-                <span className="text-[11px] font-medium text-emerald-300">
-                  Reading response aloud...
-                </span>
-              </div>
-            ) : (
-              <span className="text-[11px] font-medium text-amber-300 flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                Playback paused
-              </span>
-            )}
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {/* Speed toggle: 0.8x -> 1x -> 1.25x -> 1.5x */}
+              <button
+                onClick={() => {
+                  const rates = [0.8, 1.0, 1.25, 1.5];
+                  const nextIdx = (rates.indexOf(speechRate) + 1) % rates.length;
+                  setSpeechRate(rates[nextIdx]);
+                }}
+                className="px-2 py-0.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-[10px] font-mono font-medium text-emerald-300 transition-colors"
+                title="Change speech rate"
+              >
+                {speechRate}x
+              </button>
+
+              {isThisPlaying ? (
+                <button
+                  onClick={pause}
+                  className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
+                  title="Pause speech"
+                  aria-label="Pause speech"
+                >
+                  <Pause className="h-3.5 w-3.5" />
+                </button>
+              ) : isThisPaused ? (
+                <button
+                  onClick={resume}
+                  className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
+                  title="Resume speech"
+                  aria-label="Resume speech"
+                >
+                  <Play className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+
+              <button
+                onClick={stop}
+                className="p-1 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-colors"
+                title="Stop playback"
+                aria-label="Stop playback"
+              >
+                <Square className="h-3 w-3 fill-current" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {/* Speed toggle: 0.8x -> 1x -> 1.25x -> 1.5x */}
-            <button
-              onClick={() => {
-                const rates = [0.8, 1.0, 1.25, 1.5];
-                const nextIdx = (rates.indexOf(speechRate) + 1) % rates.length;
-                setSpeechRate(rates[nextIdx]);
-              }}
-              className="px-2 py-0.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-[10px] font-mono font-medium text-emerald-300 transition-colors"
-              title="Change speech rate"
-            >
-              {speechRate}x
-            </button>
-
-            {isThisPlaying ? (
-              <button
-                onClick={pause}
-                className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
-                title="Pause speech"
-                aria-label="Pause speech"
-              >
-                <Pause className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <button
-                onClick={resume}
-                className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
-                title="Resume speech"
-                aria-label="Resume speech"
-              >
-                <Play className="h-3.5 w-3.5" />
-              </button>
-            )}
-
-            <button
-              onClick={stop}
-              className="p-1 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-colors"
-              title="Stop playback"
-              aria-label="Stop playback"
-            >
-              <Square className="h-3 w-3 fill-current" />
-            </button>
-          </div>
+          {fallbackNotice && (
+            <div className="text-[10px] text-amber-300/90 font-medium pt-0.5 border-t border-emerald-500/10">
+              Note: {fallbackNotice}
+            </div>
+          )}
         </div>
       )}
 
@@ -358,7 +397,7 @@ export function MessageItem({ message }: MessageItemProps) {
               Publishing Organization: {activePopoverCitation.source}
             </div>
             <p className="text-xs text-zinc-300 leading-relaxed bg-black/40 p-3 rounded-xl border border-emerald-500/10 italic">
-              "{activePopoverCitation.snippet}"
+              &ldquo;{activePopoverCitation.snippet}&rdquo;
             </p>
             <div className="flex items-center justify-between pt-2">
               {(() => {

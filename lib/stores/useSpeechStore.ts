@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { DEFAULT_NEURAL_VOICE_ID } from "../speech/neuralVoices";
 
 export interface VoiceOption {
   name: string;
@@ -8,9 +9,19 @@ export interface VoiceOption {
   localService: boolean;
 }
 
-export type PlaybackStatus = "idle" | "playing" | "paused";
+export type VoiceEngine = "neural" | "browser";
+export type NeuralModelStatus = "unloaded" | "loading" | "ready" | "error" | "unsupported";
+export type PlaybackStatus = "idle" | "loading" | "playing" | "paused";
 
 interface SpeechState {
+  // Engine Selection & Abstraction
+  engine: VoiceEngine;
+  neuralStatus: NeuralModelStatus;
+  neuralProgress: number | null; // 0-100 percentage
+  selectedNeuralVoice: string; // Kokoro voice key e.g. "af_heart"
+  playbackEngine: VoiceEngine | null; // Engine actually generating current audio
+  fallbackNotice: string | null;
+
   // TTS State
   isTtsSupported: boolean;
   activeMessageId: string | null;
@@ -25,6 +36,13 @@ interface SpeechState {
   sttLanguage: string;
 
   // Actions
+  setEngine: (engine: VoiceEngine) => void;
+  setNeuralStatus: (status: NeuralModelStatus) => void;
+  setNeuralProgress: (progress: number | null) => void;
+  setSelectedNeuralVoice: (voiceId: string) => void;
+  setPlaybackEngine: (engine: VoiceEngine | null) => void;
+  setFallbackNotice: (notice: string | null) => void;
+
   setTtsSupported: (supported: boolean) => void;
   setActiveMessageId: (id: string | null) => void;
   setPlaybackStatus: (status: PlaybackStatus) => void;
@@ -38,7 +56,14 @@ interface SpeechState {
 }
 
 export const useSpeechStore = create<SpeechState>((set) => ({
-  isTtsSupported: typeof window !== "undefined" && "speechSynthesis" in window,
+  engine: "neural",
+  neuralStatus: "unloaded",
+  neuralProgress: null,
+  selectedNeuralVoice: DEFAULT_NEURAL_VOICE_ID,
+  playbackEngine: null,
+  fallbackNotice: null,
+
+  isTtsSupported: true, // Will be checked on client (Web Speech API or WebAssembly supported)
   activeMessageId: null,
   playbackStatus: "idle",
   speechRate: 1.0,
@@ -54,6 +79,13 @@ export const useSpeechStore = create<SpeechState>((set) => ({
     ),
   sttLanguage: typeof navigator !== "undefined" ? (navigator.language || "en-US") : "en-US",
 
+  setEngine: (engine) => set({ engine, fallbackNotice: null }),
+  setNeuralStatus: (status) => set({ neuralStatus: status }),
+  setNeuralProgress: (progress) => set({ neuralProgress: progress }),
+  setSelectedNeuralVoice: (voiceId) => set({ selectedNeuralVoice: voiceId }),
+  setPlaybackEngine: (engine) => set({ playbackEngine: engine }),
+  setFallbackNotice: (notice) => set({ fallbackNotice: notice }),
+
   setTtsSupported: (supported) => set({ isTtsSupported: supported }),
   setActiveMessageId: (id) => set({ activeMessageId: id }),
   setPlaybackStatus: (status) => set({ playbackStatus: status }),
@@ -63,5 +95,11 @@ export const useSpeechStore = create<SpeechState>((set) => ({
   setAvailableVoices: (voices) => set({ availableVoices: voices }),
   setSttSupported: (supported) => set({ isSttSupported: supported }),
   setSttLanguage: (lang) => set({ sttLanguage: lang }),
-  resetPlayback: () => set({ activeMessageId: null, playbackStatus: "idle" })
+  resetPlayback: () =>
+    set({
+      activeMessageId: null,
+      playbackStatus: "idle",
+      playbackEngine: null,
+      fallbackNotice: null
+    })
 }));
