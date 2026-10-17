@@ -14,10 +14,12 @@ export function useTextToSpeech() {
     speechRate,
     autoReadEnabled,
     playbackEngine,
+    ttsError,
     setActiveMessageId,
     setPlaybackStatus,
     setSpeechRate,
     setAutoReadEnabled,
+    setTtsError,
     resetPlayback
   } = useSpeechStore();
 
@@ -87,6 +89,7 @@ export function useTextToSpeech() {
 
       // Stop any existing playback and in-flight fetch
       stop();
+      setTtsError(null);
 
       const textToSpeak =
         typeof messageOrText === "string"
@@ -159,13 +162,15 @@ export function useTextToSpeech() {
         if (err instanceof DOMException && err.name === "AbortError") {
           return;
         }
+        const errorMsg = err instanceof Error ? err.message : "Speech synthesis failed.";
         console.error("ElevenLabs TTS synthesis error:", err);
         if (activeRequestIdRef.current === requestId) {
-          resetPlayback();
+          setTtsError(errorMsg);
+          setPlaybackStatus("idle");
         }
       }
     },
-    [activeMessageId, playbackStatus, resetPlayback, resume, setActiveMessageId, setPlaybackStatus, speechRate, stop]
+    [activeMessageId, playbackStatus, resetPlayback, resume, setActiveMessageId, setPlaybackStatus, setTtsError, speechRate, stop]
   );
 
   // Dynamic speech rate update
@@ -193,6 +198,7 @@ export function useTextToSpeech() {
     speechRate,
     autoReadEnabled,
     playbackEngine,
+    ttsError,
     speak,
     pause,
     resume,

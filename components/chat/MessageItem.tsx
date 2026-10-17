@@ -16,7 +16,9 @@ import {
   Play,
   Square,
   Loader2,
-  Sparkles
+  Sparkles,
+  AlertCircle,
+  X
 } from "lucide-react";
 import { formatTimestamp, cn, getSafeExternalUrl } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -37,6 +39,7 @@ export function MessageItem({ message }: MessageItemProps) {
     playbackStatus,
     speechRate,
     setSpeechRate,
+    ttsError,
     speak,
     pause,
     resume,
@@ -47,7 +50,8 @@ export function MessageItem({ message }: MessageItemProps) {
   const isThisPlaying = activeMessageId === message.id && playbackStatus === "playing";
   const isThisLoading = activeMessageId === message.id && playbackStatus === "loading";
   const isThisPaused = activeMessageId === message.id && playbackStatus === "paused";
-  const isThisActive = isThisPlaying || isThisLoading || isThisPaused;
+  const isThisError = activeMessageId === message.id && Boolean(ttsError);
+  const isThisActive = isThisPlaying || isThisLoading || isThisPaused || isThisError;
 
   const handleCopy = () => {
     let text = "";
@@ -213,10 +217,22 @@ export function MessageItem({ message }: MessageItemProps) {
 
       {/* Dynamic TTS Playback Status Banner when Active */}
       {isThisActive && (
-        <div className="flex flex-col gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-[#0a180f] to-[#08120b] border border-emerald-500/35 text-xs text-emerald-200 shadow-md animate-in fade-in">
+        <div className={cn(
+          "flex flex-col gap-1.5 px-3.5 py-2 rounded-2xl border text-xs shadow-md animate-in fade-in",
+          isThisError
+            ? "bg-gradient-to-r from-red-950/80 via-[#160a0a] to-[#120808] border-red-500/40 text-red-200"
+            : "bg-gradient-to-r from-emerald-950/80 via-[#0a180f] to-[#08120b] border border-emerald-500/35 text-emerald-200"
+        )}>
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {isThisLoading ? (
+            <div className="flex items-center gap-2 overflow-hidden flex-1">
+              {isThisError ? (
+                <div className="flex items-center gap-2 text-red-300 overflow-hidden">
+                  <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                  <span className="text-[11px] font-medium leading-tight truncate">
+                    {ttsError}
+                  </span>
+                </div>
+              ) : isThisLoading ? (
                 <div className="flex items-center gap-2 text-emerald-300">
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
                   <span className="text-[11px] font-medium">
@@ -246,48 +262,61 @@ export function MessageItem({ message }: MessageItemProps) {
               )}
             </div>
 
-            <div className="flex items-center gap-1.5">
-              {/* Speed toggle: 0.8x -> 1x -> 1.25x -> 1.5x */}
-              <button
-                onClick={() => {
-                  const rates = [0.8, 1.0, 1.25, 1.5];
-                  const nextIdx = (rates.indexOf(speechRate) + 1) % rates.length;
-                  setSpeechRate(rates[nextIdx]);
-                }}
-                className="px-2 py-0.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-[10px] font-mono font-medium text-emerald-300 transition-colors"
-                title="Change speech rate"
-              >
-                {speechRate}x
-              </button>
-
-              {isThisPlaying ? (
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isThisError ? (
                 <button
-                  onClick={pause}
-                  className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
-                  title="Pause speech"
-                  aria-label="Pause speech"
+                  onClick={stop}
+                  className="px-2 py-0.5 rounded-lg bg-red-900/60 hover:bg-red-800 text-red-200 text-[11px] transition-colors flex items-center gap-1"
+                  title="Dismiss error"
                 >
-                  <Pause className="h-3.5 w-3.5" />
+                  <X className="h-3 w-3" />
+                  <span>Dismiss</span>
                 </button>
-              ) : isThisPaused ? (
-                <button
-                  onClick={resume}
-                  className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
-                  title="Resume speech"
-                  aria-label="Resume speech"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                </button>
-              ) : null}
+              ) : (
+                <>
+                  {/* Speed toggle: 0.8x -> 1x -> 1.25x -> 1.5x */}
+                  <button
+                    onClick={() => {
+                      const rates = [0.8, 1.0, 1.25, 1.5];
+                      const nextIdx = (rates.indexOf(speechRate) + 1) % rates.length;
+                      setSpeechRate(rates[nextIdx]);
+                    }}
+                    className="px-2 py-0.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-[10px] font-mono font-medium text-emerald-300 transition-colors"
+                    title="Change speech rate"
+                  >
+                    {speechRate}x
+                  </button>
 
-              <button
-                onClick={stop}
-                className="p-1 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-colors"
-                title="Stop playback"
-                aria-label="Stop playback"
-              >
-                <Square className="h-3 w-3 fill-current" />
-              </button>
+                  {isThisPlaying ? (
+                    <button
+                      onClick={pause}
+                      className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
+                      title="Pause speech"
+                      aria-label="Pause speech"
+                    >
+                      <Pause className="h-3.5 w-3.5" />
+                    </button>
+                  ) : isThisPaused ? (
+                    <button
+                      onClick={resume}
+                      className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
+                      title="Resume speech"
+                      aria-label="Resume speech"
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+
+                  <button
+                    onClick={stop}
+                    className="p-1 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-colors"
+                    title="Stop playback"
+                    aria-label="Stop playback"
+                  >
+                    <Square className="h-3 w-3 fill-current" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

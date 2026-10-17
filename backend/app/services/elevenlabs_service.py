@@ -19,9 +19,40 @@ class ElevenLabsService:
             logger.error("ELEVENLABS_API_KEY is not configured in backend environment.")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Voice service is not configured on the server."
+                detail="Voice service is not configured on the server (missing ELEVENLABS_API_KEY)."
             )
         return key
+
+    def _extract_safe_error_detail(self, response: httpx.Response) -> str:
+        """
+        Extracts a sanitized, safe explanation from an ElevenLabs error response.
+        Never exposes credentials or internal server traces.
+        """
+        safe_msg = ""
+        try:
+            data = response.json()
+            detail = data.get("detail", {})
+            if isinstance(detail, dict):
+                safe_msg = detail.get("message") or detail.get("status") or ""
+            elif isinstance(detail, str):
+                safe_msg = detail
+            elif isinstance(detail, list) and len(detail) > 0:
+                first = detail[0]
+                if isinstance(first, dict):
+                    safe_msg = first.get("msg") or str(first)
+                else:
+                    safe_msg = str(first)
+
+            if not safe_msg and "message" in data:
+                safe_msg = str(data["message"])
+        except Exception:
+            pass
+
+        if not safe_msg:
+            clean = response.text.replace("\n", " ").strip()
+            safe_msg = clean[:150] if clean else "Unknown error from speech service."
+
+        return safe_msg
 
     async def transcribe_audio(
         self,
@@ -62,21 +93,23 @@ class ElevenLabsService:
                 logger.error("ElevenLabs API rejected request with 401 Unauthorized.")
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Voice transcription service authentication failed."
+                    detail="ElevenLabs API key is unauthorized or invalid (HTTP 401)."
                 )
 
             if response.status_code == 429:
-                logger.warning("ElevenLabs STT rate limit encountered.")
+                safe_detail = self._extract_safe_error_detail(response)
+                logger.warning(f"ElevenLabs STT rate limit: {safe_detail}")
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Voice transcription rate limit exceeded. Please try again shortly."
+                    detail=f"ElevenLabs rate limit exceeded (HTTP 429): {safe_detail}"
                 )
 
             if response.status_code != 200:
-                logger.error(f"ElevenLabs STT error: HTTP {response.status_code} - {response.text[:200]}")
+                safe_detail = self._extract_safe_error_detail(response)
+                logger.error(f"ElevenLabs STT error: HTTP {response.status_code} - {safe_detail}")
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Voice transcription service error."
+                    detail=f"ElevenLabs transcription failed (HTTP {response.status_code}): {safe_detail}"
                 )
 
             result = response.json()
@@ -107,7 +140,7 @@ class ElevenLabsService:
         Generates spoken audio from text using ElevenLabs Text-to-Speech API.
         """
         api_key = self._get_api_key()
-        target_voice = voice_id or settings.ELEVENLABS_VOICE_ID or "21m00Tcm4TlvDq8ikWAM"
+        target_voice = (voice_id or settings.ELEVENLABS_VOICE_ID or "").strip() or "21m00Tcm4TlvDq8ikWAM"
 
         headers = {
             "xi-api-key": api_key,
@@ -117,7 +150,7 @@ class ElevenLabsService:
 
         payload = {
             "text": text,
-            "model_id": settings.ELEVENLABS_TTS_MODEL,
+            "model_id": (settings.ELEVENLABS_TTS_MODEL or "").strip() or "eleven_flash_v2_5",
             "voice_settings": {
                 "stability": 0.5,
                 "similarity_boost": 0.75
@@ -136,21 +169,23 @@ class ElevenLabsService:
                 logger.error("ElevenLabs API rejected request with 401 Unauthorized.")
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Voice speech synthesis authentication failed."
+                    detail="ElevenLabs API key is unauthorized or invalid (HTTP 401)."
                 )
 
             if response.status_code == 429:
-                logger.warning("ElevenLabs TTS rate limit encountered.")
+                safe_detail = self._extract_safe_error_detail(response)
+                logger.warning(f"ElevenLabs TTS rate limit: {safe_detail}")
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Voice speech synthesis rate limit reached. Please wait a moment."
+                    detail=f"ElevenLabs rate limit reached (HTTP 429): {safe_detail}"
                 )
 
             if response.status_code != 200:
-                logger.error(f"ElevenLabs TTS error: HTTP {response.status_code} - {response.text[:200]}")
+                safe_detail = self._extract_safe_error_detail(response)
+                logger.error(f"ElevenLabs TTS error: HTTP {response.status_code} - {safe_detail}")
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Voice speech synthesis service error."
+                    detail=f"ElevenLabs speech synthesis failed (HTTP {response.status_code}): {safe_detail}"
                 )
 
             return response.content

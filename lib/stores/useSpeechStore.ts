@@ -10,6 +10,7 @@ interface SpeechState {
   speechRate: number; // 0.8, 1.0, 1.25, 1.5
   autoReadEnabled: boolean;
   playbackEngine: "elevenlabs" | null;
+  ttsError: string | null;
 
   // STT State (ElevenLabs via MediaRecorder)
   isSttSupported: boolean;
@@ -21,6 +22,7 @@ interface SpeechState {
   setAutoReadEnabled: (enabled: boolean) => void;
   setTtsSupported: (supported: boolean) => void;
   setSttSupported: (supported: boolean) => void;
+  setTtsError: (error: string | null) => void;
   resetPlayback: () => void;
 }
 
@@ -31,6 +33,7 @@ export const useSpeechStore = create<SpeechState>((set) => ({
   speechRate: 1.0,
   autoReadEnabled: false,
   playbackEngine: null,
+  ttsError: null,
 
   isSttSupported:
     typeof window !== "undefined" &&
@@ -50,10 +53,12 @@ export const useSpeechStore = create<SpeechState>((set) => ({
   setAutoReadEnabled: (enabled) => set({ autoReadEnabled: enabled }),
   setTtsSupported: (supported) => set({ isTtsSupported: supported }),
   setSttSupported: (supported) => set({ isSttSupported: supported }),
+  setTtsError: (error) => set({ ttsError: error }),
   resetPlayback: () =>
     set({
       activeMessageId: null,
       playbackStatus: "idle",
-      playbackEngine: null
+      playbackEngine: null,
+      ttsError: null
     })
 }));
