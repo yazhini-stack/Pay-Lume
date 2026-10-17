@@ -271,10 +271,10 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
             // Turn off streaming AFTER the assistant message has been committed to UI state
             resetStreaming();
 
-            // Auto-read response if user explicitly enabled auto-read in voice settings
-            if (useSpeechStore.getState().autoReadEnabled) {
-              ttsSpeak(asstMsg.id, asstMsg);
-            }
+            // Auto-read response temporarily disabled for demo safety
+            // if (useSpeechStore.getState().autoReadEnabled) {
+            //   ttsSpeak(asstMsg.id, asstMsg);
+            // }
           } else if (event.type === "error") {
             setStreamError(event.data.message);
             setStreaming(false);

@@ -50,10 +50,10 @@ export const useSpeechStore = create<SpeechState>((set) => ({
       playbackEngine: status === "idle" ? null : "elevenlabs"
     }),
   setSpeechRate: (rate) => set({ speechRate: rate }),
-  setAutoReadEnabled: (enabled) => set({ autoReadEnabled: enabled }),
+  setAutoReadEnabled: (_enabled) => set({ autoReadEnabled: false }),
   setTtsSupported: (supported) => set({ isTtsSupported: supported }),
   setSttSupported: (supported) => set({ isSttSupported: supported }),
-  setTtsError: (error) => set({ ttsError: error }),
+  setTtsError: (_error) => set({ ttsError: null }),
   resetPlayback: () =>
     set({
       activeMessageId: null,

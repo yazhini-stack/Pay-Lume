@@ -533,37 +533,11 @@ export class ApiClient {
   }
 
   /**
-   * Requests ElevenLabs synthesized speech MP3 audio blob from backend.
+   * Requests synthesized speech MP3 audio blob from backend.
+   * (Temporarily bypassed for demo safety to prevent ElevenLabs HTTP 402 calls)
    */
-  async synthesizeSpeech(text: string, signal?: AbortSignal): Promise<Blob> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        headers["Authorization"] = `Bearer ${session.access_token}`;
-      }
-    } catch (e) {
-      console.warn("Could not retrieve Supabase session token:", e);
-    }
-
-    const res = await fetch(`${API_URL}/api/voice/tts`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ text }),
-      signal,
-    });
-
-    if (!res.ok) {
-      if (res.status === 401) {
-        throw new Error("Your session is unauthenticated or has expired. Please sign in to use speech synthesis.");
-      }
-      const err = await res.json().catch(() => ({ detail: "Speech synthesis failed" }));
-      throw new Error(err.detail || `Speech synthesis error: HTTP ${res.status}`);
-    }
-
-    return await res.blob();
+  async synthesizeSpeech(_text: string, _signal?: AbortSignal): Promise<Blob> {
+    return new Blob([], { type: "audio/mpeg" });
   }
 }
 

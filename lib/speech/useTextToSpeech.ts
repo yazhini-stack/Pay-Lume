@@ -75,102 +75,17 @@ export function useTextToSpeech() {
     setPlaybackStatus("playing");
   }, [playbackStatus, setPlaybackStatus]);
 
-  // Main Speak function
+  // Main Speak function (temporarily disabled for demo safety)
   const speak = useCallback(
     async (
-      messageId: string,
-      messageOrText: (Pick<Message, "content"> & { sections?: Partial<StructuredAnswer> }) | string
+      _messageId: string,
+      _messageOrText: (Pick<Message, "content"> & { sections?: Partial<StructuredAnswer> }) | string
     ) => {
-      // If clicking play on currently paused message, resume
-      if (activeMessageId === messageId && playbackStatus === "paused") {
-        resume();
-        return;
-      }
-
-      // Stop any existing playback and in-flight fetch
-      stop();
-      setTtsError(null);
-
-      const textToSpeak =
-        typeof messageOrText === "string"
-          ? messageOrText
-          : prepareSpeechText(messageOrText);
-
-      if (!textToSpeak || !textToSpeak.trim()) {
-        return;
-      }
-
-      const requestId = `tts-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      activeRequestIdRef.current = requestId;
-
-      setActiveMessageId(messageId);
-      setPlaybackStatus("loading");
-
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
-      try {
-        const audioBlob = await apiClient.synthesizeSpeech(textToSpeak, abortController.signal);
-
-        // Discard if cancelled or user started another message while loading
-        if (activeRequestIdRef.current !== requestId) {
-          return;
-        }
-
-        const audioUrl = URL.createObjectURL(audioBlob);
-        audioUrlRef.current = audioUrl;
-
-        const audio = new Audio(audioUrl);
-        audio.playbackRate = speechRate;
-        audioRef.current = audio;
-
-        audio.onplay = () => {
-          if (activeRequestIdRef.current === requestId) {
-            setPlaybackStatus("playing");
-          }
-        };
-
-        audio.onpause = () => {
-          if (activeRequestIdRef.current === requestId && !audio.ended && audio.currentTime > 0) {
-            setPlaybackStatus("paused");
-          }
-        };
-
-        audio.onended = () => {
-          if (activeRequestIdRef.current === requestId) {
-            if (audioUrlRef.current) {
-              URL.revokeObjectURL(audioUrlRef.current);
-              audioUrlRef.current = null;
-            }
-            resetPlayback();
-          }
-        };
-
-        audio.onerror = (e) => {
-          console.warn("ElevenLabs audio playback error:", e);
-          if (activeRequestIdRef.current === requestId) {
-            if (audioUrlRef.current) {
-              URL.revokeObjectURL(audioUrlRef.current);
-              audioUrlRef.current = null;
-            }
-            resetPlayback();
-          }
-        };
-
-        await audio.play();
-      } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") {
-          return;
-        }
-        const errorMsg = err instanceof Error ? err.message : "Speech synthesis failed.";
-        console.error("ElevenLabs TTS synthesis error:", err);
-        if (activeRequestIdRef.current === requestId) {
-          setTtsError(errorMsg);
-          setPlaybackStatus("idle");
-        }
-      }
+      // Temporary demo-safe fix: ElevenLabs TTS disabled completely.
+      // Prevent any backend API calls, audio playback, or error displays.
+      return;
     },
-    [activeMessageId, playbackStatus, resetPlayback, resume, setActiveMessageId, setPlaybackStatus, setTtsError, speechRate, stop]
+    []
   );
 
   // Dynamic speech rate update
