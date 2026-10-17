@@ -76,7 +76,7 @@ export function MessageItem({ message }: MessageItemProps) {
   const renderTextWithCitations = (content: string, citations?: Citation[]) => {
     if (!citations || citations.length === 0) {
       return (
-        <div className="prose prose-invert prose-sm max-w-none text-zinc-200">
+        <div className="prose prose-invert prose-sm max-w-none text-zinc-200 break-words overflow-x-auto">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {content}
           </ReactMarkdown>
@@ -87,7 +87,7 @@ export function MessageItem({ message }: MessageItemProps) {
     // Split on citation tags like [1], [2], [3]
     const parts = content.split(/(\[\d+\])/g);
     return (
-      <div className="text-sm text-zinc-200 leading-relaxed space-y-2 whitespace-pre-wrap">
+      <div className="text-sm text-zinc-200 leading-relaxed space-y-2 whitespace-pre-wrap break-words min-w-0">
         {parts.map((part, index) => {
           const match = part.match(/\[(\d+)\]/);
           if (match) {
@@ -114,14 +114,14 @@ export function MessageItem({ message }: MessageItemProps) {
 
   if (isUser) {
     return (
-      <div className="flex items-start justify-end gap-3 max-w-3xl ml-auto">
-        <div className="p-4 rounded-3xl rounded-tr-sm bg-gradient-to-br from-[#12281b] to-[#0b1710] border border-emerald-500/25 shadow-lg text-emerald-50 text-sm max-w-xl">
-          <p className="leading-relaxed font-sans">{message.content}</p>
+      <div className="flex items-start justify-end gap-2.5 sm:gap-3 max-w-3xl ml-auto min-w-0">
+        <div className="p-3.5 sm:p-4 rounded-3xl rounded-tr-sm bg-gradient-to-br from-[#12281b] to-[#0b1710] border border-emerald-500/25 shadow-lg text-emerald-50 text-sm max-w-[88%] sm:max-w-xl break-words min-w-0">
+          <p className="leading-relaxed font-sans break-words">{message.content}</p>
           <div className="mt-2 flex items-center justify-end gap-2 text-[10px] text-emerald-400/60">
             <span>{formatTimestamp(message.createdAt)}</span>
           </div>
         </div>
-        <div className="h-9 w-9 rounded-2xl bg-emerald-900/60 border border-emerald-500/30 flex items-center justify-center text-emerald-300 flex-shrink-0 mt-0.5">
+        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-2xl bg-emerald-900/60 border border-emerald-500/30 flex items-center justify-center text-emerald-300 flex-shrink-0 mt-0.5">
           <User className="h-4 w-4" />
         </div>
       </div>
@@ -145,31 +145,31 @@ export function MessageItem({ message }: MessageItemProps) {
   };
 
   return (
-    <div className="space-y-4 max-w-3xl mr-auto animate-in fade-in duration-300">
+    <div className="space-y-4 max-w-3xl mr-auto animate-in fade-in duration-300 w-full min-w-0">
       {/* Bot Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#2d7850] to-[#123824] border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-[0_0_15px_rgba(45,120,80,0.3)]">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#2d7850] to-[#123824] border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-[0_0_15px_rgba(45,120,80,0.3)] shrink-0">
             <Shield className="h-4 w-4" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-emerald-100">Paylume Intelligence</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-500/20 font-mono">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-emerald-100 truncate">Paylume Intelligence</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-500/20 font-mono shrink-0">
                 {hasObserved && hasInterpretation && hasActions ? "Structured Review" : "Cybersecurity RAG"}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* TTS Read-Aloud Button */}
           {isTtsSupported && (
             <button
               onClick={handleTogglePlayback}
               disabled={isThisLoading}
               className={cn(
-                "p-1.5 rounded-lg transition-colors flex items-center justify-center",
+                "p-1.5 rounded-lg transition-colors flex items-center justify-center touch-manipulation min-h-[36px] min-w-[36px]",
                 isThisActive
                   ? "bg-emerald-900/60 text-emerald-200 border border-emerald-400/40"
                   : "text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/40"
@@ -207,7 +207,7 @@ export function MessageItem({ message }: MessageItemProps) {
 
           <button
             onClick={handleCopy}
-            className="p-1.5 text-zinc-400 hover:text-emerald-300 rounded-lg hover:bg-emerald-950/40 transition-colors"
+            className="p-1.5 text-zinc-400 hover:text-emerald-300 rounded-lg hover:bg-emerald-950/40 transition-colors touch-manipulation min-h-[36px] min-w-[36px] flex items-center justify-center"
             title="Copy answer"
           >
             {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
@@ -218,80 +218,80 @@ export function MessageItem({ message }: MessageItemProps) {
       {/* Dynamic TTS Playback Status Banner when Active (Error banner suppressed for demo safety) */}
       {isThisActive && !isThisError && (
         <div className="flex flex-col gap-1.5 px-3.5 py-2 rounded-2xl border text-xs shadow-md animate-in fade-in bg-gradient-to-r from-emerald-950/80 via-[#0a180f] to-[#08120b] border-emerald-500/35 text-emerald-200">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 overflow-hidden flex-1">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-[140px]">
               {isThisLoading ? (
                 <div className="flex items-center gap-2 text-emerald-300">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
-                  <span className="text-[11px] font-medium">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400 shrink-0" />
+                  <span className="text-[11px] font-medium truncate">
                     Synthesizing audio...
                   </span>
                 </div>
               ) : isThisPlaying ? (
-                <div className="flex items-center gap-2">
-                  <span className="flex items-end gap-0.5 h-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex items-end gap-0.5 h-3 shrink-0">
                     <span className="w-0.5 h-2 bg-emerald-400 animate-pulse" />
                     <span className="w-0.5 h-3 bg-emerald-300 animate-pulse delay-75" />
                     <span className="w-0.5 h-1.5 bg-emerald-500 animate-pulse delay-150" />
                     <span className="w-0.5 h-3 bg-emerald-400 animate-pulse delay-100" />
                   </span>
-                  <span className="text-[11px] font-medium text-emerald-300">
-                    Reading response aloud...
+                  <span className="text-[11px] font-medium text-emerald-300 truncate">
+                    Reading aloud...
                   </span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-mono hidden sm:inline-flex items-center gap-1">
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-mono hidden sm:inline-flex items-center gap-1 shrink-0">
                     <Sparkles className="h-2.5 w-2.5 text-emerald-400" /> ElevenLabs
                   </span>
                 </div>
               ) : (
-                <span className="text-[11px] font-medium text-amber-300 flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span className="text-[11px] font-medium text-amber-300 flex items-center gap-1.5 truncate">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
                   Playback paused
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
               {/* Speed toggle: 0.8x -> 1x -> 1.25x -> 1.5x */}
-                  <button
-                    onClick={() => {
-                      const rates = [0.8, 1.0, 1.25, 1.5];
-                      const nextIdx = (rates.indexOf(speechRate) + 1) % rates.length;
-                      setSpeechRate(rates[nextIdx]);
-                    }}
-                    className="px-2 py-0.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-[10px] font-mono font-medium text-emerald-300 transition-colors"
-                    title="Change speech rate"
-                  >
-                    {speechRate}x
-                  </button>
+              <button
+                onClick={() => {
+                  const rates = [0.8, 1.0, 1.25, 1.5];
+                  const nextIdx = (rates.indexOf(speechRate) + 1) % rates.length;
+                  setSpeechRate(rates[nextIdx]);
+                }}
+                className="px-2 py-0.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-[10px] font-mono font-medium text-emerald-300 transition-colors"
+                title="Change speech rate"
+              >
+                {speechRate}x
+              </button>
 
-                  {isThisPlaying ? (
-                    <button
-                      onClick={pause}
-                      className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
-                      title="Pause speech"
-                      aria-label="Pause speech"
-                    >
-                      <Pause className="h-3.5 w-3.5" />
-                    </button>
-                  ) : isThisPaused ? (
-                    <button
-                      onClick={resume}
-                      className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
-                      title="Resume speech"
-                      aria-label="Resume speech"
-                    >
-                      <Play className="h-3.5 w-3.5" />
-                    </button>
-                  ) : null}
+              {isThisPlaying ? (
+                <button
+                  onClick={pause}
+                  className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
+                  title="Pause speech"
+                  aria-label="Pause speech"
+                >
+                  <Pause className="h-3.5 w-3.5" />
+                </button>
+              ) : isThisPaused ? (
+                <button
+                  onClick={resume}
+                  className="p-1 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 transition-colors"
+                  title="Resume speech"
+                  aria-label="Resume speech"
+                >
+                  <Play className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
 
-                  <button
-                    onClick={stop}
-                    className="p-1 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-colors"
-                    title="Stop playback"
-                    aria-label="Stop playback"
-                  >
-                    <Square className="h-3 w-3 fill-current" />
-                  </button>
+              <button
+                onClick={stop}
+                className="p-1 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 transition-colors"
+                title="Stop playback"
+                aria-label="Stop playback"
+              >
+                <Square className="h-3 w-3 fill-current" />
+              </button>
             </div>
           </div>
         </div>
@@ -299,26 +299,26 @@ export function MessageItem({ message }: MessageItemProps) {
 
       {/* DIRECT QUESTION-DRIVEN CONTENT ANSWER */}
       {message.content && (
-        <div className="p-4 sm:p-5 rounded-3xl bg-[#0a150e]/90 border border-emerald-500/20 shadow-[0_2px_15px_rgba(0,0,0,0.4)] text-sm text-zinc-200 leading-relaxed">
+        <div className="p-3.5 sm:p-5 rounded-3xl bg-[#0a150e]/90 border border-emerald-500/20 shadow-[0_2px_15px_rgba(0,0,0,0.4)] text-sm text-zinc-200 leading-relaxed break-words overflow-hidden">
           {renderTextWithCitations(message.content, citations)}
         </div>
       )}
 
       {/* OPTIONAL STRUCTURED SECTIONS (ONLY RENDERED WHEN PRESENT & USEFUL) */}
       {(hasObserved || hasInterpretation || hasActions) && (
-        <div className="space-y-3.5">
+        <div className="space-y-3 sm:space-y-3.5">
           {/* 1. OBSERVED */}
           {hasObserved && (
-            <div className="p-4 rounded-3xl bg-[#0a150e]/90 border border-emerald-500/20 shadow-[0_2px_15px_rgba(0,0,0,0.4)] relative overflow-hidden group hover:border-emerald-500/35 transition-colors">
-              <div className="flex items-center gap-2 mb-2.5">
-                <div className="h-6 w-6 rounded-lg bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-300">
+            <div className="p-3.5 sm:p-4 rounded-3xl bg-[#0a150e]/90 border border-emerald-500/20 shadow-[0_2px_15px_rgba(0,0,0,0.4)] relative overflow-hidden group hover:border-emerald-500/35 transition-colors">
+              <div className="flex items-center gap-2 mb-2 sm:mb-2.5">
+                <div className="h-6 w-6 rounded-lg bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-300 shrink-0">
                   <Eye className="h-3.5 w-3.5" />
                 </div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-300">
                   Observed (Factual Evidence)
                 </h4>
               </div>
-              <div className="pl-8">
+              <div className="pl-0 mt-2 sm:pl-8 sm:mt-0 break-words">
                 {renderTextWithCitations(sections.observed || "", citations)}
               </div>
             </div>
@@ -326,16 +326,16 @@ export function MessageItem({ message }: MessageItemProps) {
 
           {/* 2. INTERPRETATION */}
           {hasInterpretation && (
-            <div className="p-4 rounded-3xl bg-[#0a150e]/90 border border-emerald-500/20 shadow-[0_2px_15px_rgba(0,0,0,0.4)] relative overflow-hidden group hover:border-emerald-500/35 transition-colors">
-              <div className="flex items-center gap-2 mb-2.5">
-                <div className="h-6 w-6 rounded-lg bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-300">
+            <div className="p-3.5 sm:p-4 rounded-3xl bg-[#0a150e]/90 border border-emerald-500/20 shadow-[0_2px_15px_rgba(0,0,0,0.4)] relative overflow-hidden group hover:border-emerald-500/35 transition-colors">
+              <div className="flex items-center gap-2 mb-2 sm:mb-2.5">
+                <div className="h-6 w-6 rounded-lg bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-300 shrink-0">
                   <Compass className="h-3.5 w-3.5" />
                 </div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-300">
                   Interpretation (Analysis)
                 </h4>
               </div>
-              <div className="pl-8">
+              <div className="pl-0 mt-2 sm:pl-8 sm:mt-0 break-words">
                 {renderTextWithCitations(sections.interpretation || "", citations)}
               </div>
             </div>
@@ -343,16 +343,16 @@ export function MessageItem({ message }: MessageItemProps) {
 
           {/* 3. RECOMMENDED ACTIONS */}
           {hasActions && (
-            <div className="p-4 rounded-3xl bg-[#08130b]/90 border border-emerald-500/25 shadow-[0_2px_15px_rgba(0,0,0,0.4)] relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
-              <div className="flex items-center gap-2 mb-2.5">
-                <div className="h-6 w-6 rounded-lg bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-300">
+            <div className="p-3.5 sm:p-4 rounded-3xl bg-[#08130b]/90 border border-emerald-500/25 shadow-[0_2px_15px_rgba(0,0,0,0.4)] relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
+              <div className="flex items-center gap-2 mb-2 sm:mb-2.5">
+                <div className="h-6 w-6 rounded-lg bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-300 shrink-0">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                 </div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-300">
                   Recommended Actions
                 </h4>
               </div>
-              <div className="pl-8">
+              <div className="pl-0 mt-2 sm:pl-8 sm:mt-0 break-words">
                 {renderTextWithCitations(sections.actions || "", citations)}
               </div>
             </div>
@@ -360,33 +360,32 @@ export function MessageItem({ message }: MessageItemProps) {
         </div>
       )}
 
-
-
       {/* Source Popover Modal when clicking superscript [N] */}
       {activePopoverCitation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="max-w-md w-full p-5 rounded-3xl bg-[#0b160f] border border-emerald-500/30 shadow-2xl space-y-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="max-w-md w-full max-h-[85dvh] overflow-y-auto p-4 sm:p-5 rounded-3xl bg-[#0b160f] border border-emerald-500/30 shadow-2xl space-y-3">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 font-bold">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 font-bold shrink-0">
                   [{activePopoverCitation.id}]
                 </span>
-                <h4 className="text-sm font-semibold text-emerald-100">{activePopoverCitation.title}</h4>
+                <h4 className="text-sm font-semibold text-emerald-100 truncate">{activePopoverCitation.title}</h4>
               </div>
               <button
                 onClick={() => setActivePopoverCitation(null)}
-                className="text-zinc-400 hover:text-white text-xs p-1"
+                className="text-zinc-400 hover:text-white text-xs p-1.5 rounded-lg hover:bg-emerald-950/50 shrink-0"
+                aria-label="Close citation details"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
             <div className="text-xs text-emerald-400 font-medium">
               Publishing Organization: {activePopoverCitation.source}
             </div>
-            <p className="text-xs text-zinc-300 leading-relaxed bg-black/40 p-3 rounded-xl border border-emerald-500/10 italic">
+            <p className="text-xs text-zinc-300 leading-relaxed bg-black/40 p-3 rounded-xl border border-emerald-500/10 italic break-words">
               &ldquo;{activePopoverCitation.snippet}&rdquo;
             </p>
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-2.5 pt-2">
               {(() => {
                 const modalUrl = getSafeExternalUrl(activePopoverCitation.url, activePopoverCitation.source);
                 if (modalUrl) {
@@ -395,7 +394,7 @@ export function MessageItem({ message }: MessageItemProps) {
                       href={modalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-emerald-300 hover:underline flex items-center gap-1.5"
+                      className="text-xs text-emerald-300 hover:underline flex items-center gap-1.5 justify-center xs:justify-start"
                     >
                       <span>Read full official advisory</span>
                       <ExternalLink className="h-3 w-3" />
@@ -403,14 +402,14 @@ export function MessageItem({ message }: MessageItemProps) {
                   );
                 }
                 return (
-                  <span className="text-xs text-zinc-500 italic">
+                  <span className="text-xs text-zinc-500 italic text-center xs:text-left">
                     Official advisory URL unavailable
                   </span>
                 );
               })()}
               <button
                 onClick={() => setActivePopoverCitation(null)}
-                className="btn-pill-secondary text-xs px-3 py-1"
+                className="btn-pill-secondary text-xs px-3 py-1.5 text-center"
               >
                 Close
               </button>

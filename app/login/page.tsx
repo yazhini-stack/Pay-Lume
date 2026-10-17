@@ -77,7 +77,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060b08] text-zinc-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden select-none">
+    <div className="min-h-screen bg-[#060b08] text-zinc-100 flex flex-col justify-center items-center px-3 sm:px-4 py-8 sm:py-12 relative overflow-hidden select-none">
       {/* Ambient background glows */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-emerald-600/12 rounded-full blur-[140px] pointer-events-none -z-10" />
       <div className="absolute bottom-10 -right-20 w-[400px] h-[300px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
@@ -86,7 +86,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md relative z-10">
         
         {/* Brand Header */}
-        <div className="flex flex-col items-center text-center space-y-4 mb-8">
+        <div className="flex flex-col items-center text-center space-y-4 mb-6 sm:mb-8">
           <Link href="/" className="group flex flex-col items-center">
             {/* Luminous Emerald Shield */}
             <div className="relative mb-3">
@@ -115,7 +115,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card Form */}
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-emerald-500/20 shadow-[0_8px_35px_rgba(0,0,0,0.4)] backdrop-blur-2xl relative">
+        <div className="glass-panel p-5 sm:p-8 rounded-3xl border border-emerald-500/20 shadow-[0_8px_35px_rgba(0,0,0,0.4)] backdrop-blur-2xl relative">
           
           {/* Status / Alert Messages */}
           {errorMessage && (
@@ -155,7 +155,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50"
+                  className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-4 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50"
                 />
               </div>
             </div>
@@ -189,7 +189,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-11 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50 font-mono tracking-wider"
+                  className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-11 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50 font-mono tracking-wider"
                 />
                 <button
                   type="button"

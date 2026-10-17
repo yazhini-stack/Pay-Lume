@@ -35,7 +35,7 @@ export function PrivacyGuardModal() {
             Paylume extracts text and transaction parameters to explain payment safety risks. To protect your security, <strong className="text-amber-300">never upload or paste:</strong>
           </p>
           
-          <ul className="grid grid-cols-2 gap-2 text-xs text-zinc-300">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-zinc-300">
             <li className="flex items-center gap-2 p-2 rounded-xl bg-amber-950/20 border border-amber-500/10">
               <AlertOctagon className="h-4 w-4 text-amber-400 flex-shrink-0" />
               <span>One-Time Passwords (OTPs)</span>

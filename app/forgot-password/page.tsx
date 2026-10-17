@@ -57,14 +57,14 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060b08] text-zinc-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden select-none">
+    <div className="min-h-screen bg-[#060b08] text-zinc-100 flex flex-col justify-center items-center px-3 sm:px-4 py-8 sm:py-12 relative overflow-hidden select-none">
       {/* Ambient background glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-emerald-600/12 rounded-full blur-[140px] pointer-events-none -z-10" />
 
       <div className="w-full max-w-md relative z-10">
         
         {/* Brand Header */}
-        <div className="flex flex-col items-center text-center space-y-4 mb-8">
+        <div className="flex flex-col items-center text-center space-y-4 mb-6 sm:mb-8">
           <Link href="/" className="group flex flex-col items-center">
             <div className="relative mb-3">
               <div className="absolute -inset-2 bg-emerald-500/25 rounded-2xl blur-lg group-hover:bg-emerald-500/35 transition-all duration-300" />
@@ -92,7 +92,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Card */}
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-emerald-500/20 shadow-[0_8px_35px_rgba(0,0,0,0.4)] backdrop-blur-2xl relative">
+        <div className="glass-panel p-5 sm:p-8 rounded-3xl border border-emerald-500/20 shadow-[0_8px_35px_rgba(0,0,0,0.4)] backdrop-blur-2xl relative">
           
           {isSuccess ? (
             <div className="space-y-5 text-center animate-in fade-in zoom-in-95">
@@ -150,7 +150,7 @@ export default function ForgotPasswordPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50"
+                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-4 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50"
                   />
                 </div>
               </div>

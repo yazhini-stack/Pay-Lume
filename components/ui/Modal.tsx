@@ -48,7 +48,7 @@ export function Modal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/75 backdrop-blur-md transition-opacity duration-200"
@@ -58,14 +58,14 @@ export function Modal({
       {/* Dialog box */}
       <div
         className={cn(
-          "relative w-full rounded-3xl bg-[#0b140e] border border-emerald-500/20 p-6 shadow-2xl shadow-black/80 z-10 animate-in fade-in zoom-in-95 duration-200",
+          "relative w-full max-h-[90dvh] overflow-y-auto rounded-3xl bg-[#0b140e] border border-emerald-500/20 p-4 sm:p-6 shadow-2xl shadow-black/80 z-10 animate-in fade-in zoom-in-95 duration-200",
           maxWidths[maxWidth],
           className
         )}
       >
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 text-zinc-400 hover:text-emerald-300 p-1.5 rounded-full hover:bg-emerald-950/50 transition-colors"
+          className="absolute top-4 right-4 sm:top-5 sm:right-5 text-zinc-400 hover:text-emerald-300 p-1.5 rounded-full hover:bg-emerald-950/50 transition-colors touch-manipulation"
           aria-label="Close dialog"
         >
           <X className="h-5 w-5" />
@@ -73,9 +73,9 @@ export function Modal({
 
         {title && (
           <div className="mb-4 pr-8">
-            <h3 className="text-xl font-semibold text-emerald-100 tracking-tight">{title}</h3>
+            <h3 className="text-lg sm:text-xl font-semibold text-emerald-100 tracking-tight">{title}</h3>
             {description && (
-              <p className="mt-1 text-sm text-zinc-400">{description}</p>
+              <p className="mt-1 text-xs sm:text-sm text-zinc-400">{description}</p>
             )}
           </div>
         )}

@@ -26,9 +26,17 @@ export function EvidencePanel() {
   if (!isEvidencePanelOpen) return null;
 
   return (
-    <aside className="w-80 xl:w-96 flex flex-col h-full bg-[#08100b]/90 border-l border-emerald-500/15 backdrop-blur-xl z-20 flex-shrink-0">
-      {/* Panel Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-emerald-500/15">
+    <>
+      {/* Mobile Backdrop Overlay for Evidence Drawer */}
+      <div
+        onClick={() => toggleEvidencePanel(false)}
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-200"
+        aria-hidden="true"
+      />
+
+      <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-[85vw] sm:max-w-sm h-full flex flex-col bg-[#08100b]/95 border-l border-emerald-500/20 backdrop-blur-2xl shadow-2xl lg:relative lg:w-80 xl:w-96 lg:max-w-none lg:shadow-none lg:z-20 flex-shrink-0 animate-in slide-in-from-right duration-300">
+        {/* Panel Header */}
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-emerald-500/15">
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 rounded-lg bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
             <Shield className="h-4 w-4" />
@@ -88,5 +96,6 @@ export function EvidencePanel() {
         )}
       </div>
     </aside>
-  );
+  </>
+);
 }

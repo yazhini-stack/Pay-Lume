@@ -76,7 +76,7 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
     enabled: Boolean(currentConvId)
   });
 
-  // Sync state when switching conversations via navigation
+  // Synchronize state when switching conversations via navigation
   useEffect(() => {
     if (initialConversationId) {
       setActiveConversationId(initialConversationId);
@@ -86,6 +86,18 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
       setCurrentMessages([]);
     }
   }, [initialConversationId, setActiveConversationId, setActiveEvidence]);
+
+  // Collapse sidebar and evidence panel on smaller screens by default
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.innerWidth < 768) {
+        toggleSidebar(false);
+      }
+      if (window.innerWidth < 1024) {
+        toggleEvidencePanel(false);
+      }
+    }
+  }, [toggleSidebar, toggleEvidencePanel]);
 
   // Sync loaded conversation messages when hydrating or switching
   useEffect(() => {
@@ -151,12 +163,18 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
   // Handle selecting past conversation
   const handleSelectConversation = (id: string) => {
     ttsStop();
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      toggleSidebar(false);
+    }
     router.push(`/chat/${id}`);
   };
 
   // Handle new chat
   const handleNewChat = () => {
     ttsStop();
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      toggleSidebar(false);
+    }
     setActiveConversationId(null);
     setActiveEvidence(null);
     setCurrentMessages([]);
@@ -292,7 +310,7 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
 
   return (
     <AuthGuard>
-      <div className="flex h-screen w-full bg-[#060b08] text-zinc-100 overflow-hidden select-none">
+      <div className="flex h-screen h-[100dvh] max-h-[100dvh] w-full bg-[#060b08] text-zinc-100 overflow-hidden select-none relative">
         {/* 1. LEFT REGION: Collapsible Conversation Sidebar */}
         <ConversationSidebar
           conversations={conversations}
@@ -305,33 +323,35 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
         {/* 2. CENTER REGION: Header, Message Thread & Composer */}
         <main className="flex-1 flex flex-col h-full min-w-0 bg-[#060b08] relative">
           {/* Workspace Top Header */}
-          <header className="h-14 px-4 sm:px-6 border-b border-emerald-500/15 flex items-center justify-between bg-[#08120b]/80 backdrop-blur-xl z-10 flex-shrink-0">
-            <div className="flex items-center gap-3">
+          <header className="h-14 px-3 sm:px-6 border-b border-emerald-500/15 flex items-center justify-between bg-[#08120b]/80 backdrop-blur-xl z-10 flex-shrink-0 gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <button
                 onClick={() => toggleSidebar()}
-                className="p-1.5 rounded-xl text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/40 md:hidden"
+                className="p-1.5 rounded-xl text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/40 md:hidden shrink-0 touch-manipulation"
                 title="Open menu"
+                aria-label="Open conversation menu"
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm font-semibold text-emerald-100 truncate max-w-[200px] sm:max-w-md">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs sm:text-sm font-semibold text-emerald-100 truncate max-w-[130px] xs:max-w-[170px] sm:max-w-xs md:max-w-md">
                   {activeConv?.title || (activeEvidence ? activeEvidence.title : "New Payment Investigation")}
                 </span>
-                <span className="hidden sm:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-500/25">
+                <span className="hidden md:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-500/25 shrink-0">
                   Non-Evaluative RAG
                 </span>
               </div>
             </div>
 
             {/* Right toolbar: Voice Settings & Evidence Panel Toggle */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <VoiceSettingsPopover />
 
               <button
                 onClick={() => toggleEvidencePanel()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-900/60 text-xs font-medium transition-colors"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-900/60 text-xs font-medium transition-colors shrink-0 touch-manipulation"
                 title={isEvidencePanelOpen ? "Hide Evidence Panel" : "Show Evidence Panel"}
+                aria-label={isEvidencePanelOpen ? "Hide Evidence Panel" : "Show Evidence Panel"}
               >
                 {isEvidencePanelOpen ? (
                   <>
@@ -369,13 +389,13 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
             onOpenAlreadyPaid={openAlreadyPaidModal}
           />
 
-          {/* Composer (Persistent at bottom) */}
-          <div className="p-4 sm:p-5 border-t border-emerald-500/15 bg-gradient-to-t from-[#060b08] via-[#060b08]/90 to-transparent flex-shrink-0">
+          {/* Composer (Persistent at bottom) with safe-area spacing */}
+          <div className="p-3 sm:p-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-emerald-500/15 bg-gradient-to-t from-[#060b08] via-[#060b08]/90 to-transparent flex-shrink-0">
             <Composer onSendMessage={handleSendMessage} />
           </div>
         </main>
 
-        {/* 3. RIGHT REGION: Persistent Evidence Panel */}
+        {/* 3. RIGHT REGION: Evidence Panel */}
         <EvidencePanel />
 
         {/* 4. Post-Payment Emergency Assistance Modal */}

@@ -94,7 +94,7 @@ export function MessageThread({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-6"
+        className="flex-1 overflow-y-auto px-3 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6"
       >
         {isLoading ? (
           <div className="space-y-6 max-w-3xl mx-auto py-8">
@@ -298,8 +298,9 @@ export function MessageThread({
       {showScrollBottom && (
         <button
           onClick={() => scrollToBottom(true)}
-          className="absolute bottom-4 right-8 p-2.5 rounded-full bg-[#0e2114]/90 border border-emerald-500/30 text-emerald-300 shadow-xl backdrop-blur-md hover:bg-emerald-900 transition-all z-10"
+          className="absolute bottom-3 sm:bottom-4 right-3 sm:right-8 p-2.5 rounded-full bg-[#0e2114]/90 border border-emerald-500/30 text-emerald-300 shadow-xl backdrop-blur-md hover:bg-emerald-900 transition-all z-10 touch-manipulation"
           title="Scroll to latest"
+          aria-label="Scroll to latest"
         >
           <ArrowDown className="h-4 w-4" />
         </button>

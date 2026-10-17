@@ -73,11 +73,11 @@ export function ConversationSidebar({
       <aside
         className={cn(
           "fixed md:relative z-40 h-full flex flex-col bg-[#071109]/95 border-r border-emerald-500/15 backdrop-blur-2xl transition-all duration-300",
-          isSidebarOpen ? "w-72 sm:w-80 translate-x-0" : "w-0 -translate-x-full md:w-20 md:translate-x-0 overflow-hidden"
+          isSidebarOpen ? "w-72 sm:w-80 max-w-[85vw] translate-x-0 shadow-2xl md:shadow-none" : "w-0 -translate-x-full md:w-20 md:translate-x-0 overflow-hidden"
         )}
       >
         {/* Top Branding & New Chat Button */}
-        <div className="p-4 border-b border-emerald-500/15 flex flex-col gap-3">
+        <div className="p-3.5 sm:p-4 border-b border-emerald-500/15 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5 group">
               <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-[#2d7850] to-[#123824] border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-[0_0_15px_rgba(45,120,80,0.3)] transition-transform group-hover:scale-105">
@@ -99,10 +99,18 @@ export function ConversationSidebar({
             {/* Toggle Button for desktop and mobile */}
             <button
               onClick={() => toggleSidebar()}
-              className="p-1.5 rounded-xl text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/40 transition-colors"
+              className="p-1.5 rounded-xl text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/40 transition-colors touch-manipulation"
               title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             >
-              {isSidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              {isSidebarOpen ? (
+                <>
+                  <X className="h-5 w-5 md:hidden" />
+                  <ChevronLeft className="h-4 w-4 hidden md:block" />
+                </>
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
             </button>
           </div>
 

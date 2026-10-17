@@ -114,7 +114,7 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060b08] text-zinc-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden select-none">
+    <div className="min-h-screen bg-[#060b08] text-zinc-100 flex flex-col justify-center items-center px-3 sm:px-4 py-8 sm:py-12 relative overflow-hidden select-none">
       {/* Ambient background glows */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-emerald-600/12 rounded-full blur-[140px] pointer-events-none -z-10" />
       <div className="absolute bottom-10 -left-20 w-[400px] h-[300px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none -z-10" />
@@ -152,7 +152,7 @@ export default function SignUpPage() {
 
         {/* Verification Sent State */}
         {isVerificationSent ? (
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-emerald-500/30 shadow-[0_8px_35px_rgba(0,0,0,0.4)] text-center space-y-5 animate-in fade-in zoom-in-95">
+          <div className="glass-panel p-5 sm:p-8 rounded-3xl border border-emerald-500/30 shadow-[0_8px_35px_rgba(0,0,0,0.4)] text-center space-y-5 animate-in fade-in zoom-in-95">
             <div className="h-16 w-16 mx-auto rounded-3xl bg-emerald-950/80 border border-emerald-400/50 flex items-center justify-center text-emerald-300 shadow-[0_0_25px_rgba(45,120,80,0.35)]">
               <MailCheck className="h-8 w-8 text-emerald-400" />
             </div>
@@ -180,7 +180,7 @@ export default function SignUpPage() {
           </div>
         ) : (
           /* Signup Form */
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-emerald-500/20 shadow-[0_8px_35px_rgba(0,0,0,0.4)] backdrop-blur-2xl relative">
+          <div className="glass-panel p-5 sm:p-8 rounded-3xl border border-emerald-500/20 shadow-[0_8px_35px_rgba(0,0,0,0.4)] backdrop-blur-2xl relative">
             
             {/* Error Message */}
             {errorMessage && (
@@ -212,7 +212,7 @@ export default function SignUpPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50"
+                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-4 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -237,7 +237,7 @@ export default function SignUpPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50"
+                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-4 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -262,7 +262,7 @@ export default function SignUpPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-11 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50 font-mono tracking-wider"
+                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-11 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50 font-mono tracking-wider"
                   />
                   <button
                     type="button"
@@ -278,7 +278,7 @@ export default function SignUpPage() {
                 {password.length > 0 && (
                   <div className="pt-2 pb-1 space-y-1.5 text-[11px]">
                     <span className="text-zinc-400 font-medium">Password Requirements:</span>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-1.5">
                       <div className={`flex items-center gap-1.5 ${hasMinLength ? "text-emerald-400 font-medium" : "text-zinc-500"}`}>
                         {hasMinLength ? <Check className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-zinc-600 ml-1" />}
                         <span>Min 8 characters</span>
@@ -320,7 +320,7 @@ export default function SignUpPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-11 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50 font-mono tracking-wider"
+                    className="w-full bg-[#07130a]/80 border border-emerald-500/20 rounded-2xl pl-10 pr-11 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 transition-all disabled:opacity-50 font-mono tracking-wider"
                   />
                   <button
                     type="button"

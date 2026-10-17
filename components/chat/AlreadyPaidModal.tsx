@@ -102,34 +102,34 @@ export function AlreadyPaidModal({ isOpen, onClose, onSelectFlow }: AlreadyPaidM
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-xl rounded-3xl bg-[#0b140f] border border-red-500/30 shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-xl rounded-3xl bg-[#0b140f] border border-red-500/30 shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[90dvh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="already-paid-title"
       >
         {/* Top Emergency Header */}
-        <div className="p-5 border-b border-red-500/20 bg-gradient-to-r from-red-950/60 via-[#160c0c] to-[#0c1810] flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="p-4 sm:p-5 border-b border-red-500/20 bg-gradient-to-r from-red-950/60 via-[#160c0c] to-[#0c1810] flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 rounded-2xl bg-red-950 border border-red-500/40 flex items-center justify-center text-red-300 shadow-[0_0_20px_rgba(239,68,68,0.25)] flex-shrink-0">
               <AlertOctagon className="h-5 w-5 text-red-400" />
             </div>
-            <div>
-              <h3 id="already-paid-title" className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
+            <div className="min-w-0">
+              <h3 id="already-paid-title" className="text-sm sm:text-base font-semibold text-white tracking-tight flex items-center gap-2 flex-wrap">
                 <span>🚨 I Already Paid</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-red-900/50 text-red-300 border border-red-500/30 font-bold uppercase tracking-wider">
-                  Post-Payment Assistance
+                  Post-Payment
                 </span>
               </h3>
-              <p className="text-xs text-red-200/80 mt-0.5">
-                Don't panic. Acting promptly gives you the strongest chance to safeguard your funds and accounts.
+              <p className="text-xs text-red-200/80 mt-0.5 leading-snug">
+                Acting promptly gives you the strongest chance to safeguard your funds.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors shrink-0 touch-manipulation"
             aria-label="Close post-payment modal"
           >
             <X className="h-4 w-4" />
@@ -137,7 +137,7 @@ export function AlreadyPaidModal({ isOpen, onClose, onSelectFlow }: AlreadyPaidM
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 space-y-4 overflow-y-auto">
+        <div className="p-4 sm:p-5 space-y-3.5 sm:space-y-4 overflow-y-auto">
           {/* Method Selection */}
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wider text-emerald-200 block">
@@ -150,7 +150,7 @@ export function AlreadyPaidModal({ isOpen, onClose, onSelectFlow }: AlreadyPaidM
                   <button
                     key={opt.id}
                     onClick={() => handleSelect(opt)}
-                    className={`p-3 rounded-2xl border text-left flex flex-col gap-1.5 transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-2xl border text-left flex flex-col gap-1.5 transition-all touch-manipulation ${
                       isSelected
                         ? "bg-emerald-950/80 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
                         : "bg-[#09150d]/80 border-emerald-500/15 hover:border-emerald-500/35 text-zinc-300 hover:text-white"
@@ -160,7 +160,7 @@ export function AlreadyPaidModal({ isOpen, onClose, onSelectFlow }: AlreadyPaidM
                       {opt.icon}
                       {isSelected && <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />}
                     </div>
-                    <span className="text-xs font-medium">{opt.label}</span>
+                    <span className="text-xs font-medium truncate w-full">{opt.label}</span>
                   </button>
                 );
               })}
@@ -176,19 +176,19 @@ export function AlreadyPaidModal({ isOpen, onClose, onSelectFlow }: AlreadyPaidM
               type="text"
               value={customNotes}
               onChange={(e) => setCustomNotes(e.target.value)}
-              placeholder="e.g. Paid ₹5,000 via Google Pay after an electricity cutoff alert"
-              className="w-full px-3 py-2 rounded-xl bg-black/50 border border-emerald-500/20 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-400 transition-colors"
+              placeholder="e.g. Paid ₹5,000 via Google Pay after an alert"
+              className="w-full px-3 py-2 rounded-xl bg-black/50 border border-emerald-500/20 text-base sm:text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-400 transition-colors"
             />
           </div>
 
           {/* Preview of Question to be Asked */}
-          <div className="p-3.5 rounded-2xl bg-black/40 border border-emerald-500/20 space-y-1">
+          <div className="p-3 sm:p-3.5 rounded-2xl bg-black/40 border border-emerald-500/20 space-y-1">
             <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-300">
-              <span>Question to be analyzed by Paylume RAG:</span>
-              <span className="text-zinc-500 font-mono text-[10px]">Editable before sending</span>
+              <span>Question to be analyzed:</span>
+              <span className="text-zinc-500 font-mono text-[10px]">Editable</span>
             </div>
-            <p className="text-xs text-zinc-300 leading-relaxed font-sans italic">
-              "{getFinalQuestion()}"
+            <p className="text-xs text-zinc-300 leading-relaxed font-sans italic break-words">
+              &ldquo;{getFinalQuestion()}&rdquo;
             </p>
           </div>
 
@@ -198,32 +198,32 @@ export function AlreadyPaidModal({ isOpen, onClose, onSelectFlow }: AlreadyPaidM
             <div className="space-y-0.5 leading-relaxed">
               <span className="font-semibold text-amber-100">Strict Security Rule:</span>
               <p className="text-[11px]">
-                Paylume will <strong>never</strong> ask for or store your OTP, UPI PIN, ATM PIN, CVV, or passwords. Never share these credentials with anyone.
+                Paylume will <strong>never</strong> ask for or store your OTP, UPI PIN, ATM PIN, CVV, or passwords.
               </p>
             </div>
           </div>
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="p-4 border-t border-emerald-500/15 bg-[#08120b] flex flex-col sm:flex-row items-center justify-between gap-2.5">
+        <div className="p-3.5 sm:p-4 border-t border-emerald-500/15 bg-[#08120b] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           <button
             onClick={handleQuickQuestion}
-            className="text-xs text-zinc-400 hover:text-emerald-300 underline underline-offset-4 order-3 sm:order-1"
+            className="text-xs text-zinc-400 hover:text-emerald-300 underline underline-offset-4 order-3 sm:order-1 text-center sm:text-left py-1 touch-manipulation"
           >
             Just ask "What should I do now?"
           </button>
           
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end order-1 sm:order-2">
+          <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 w-full sm:w-auto justify-end order-1 sm:order-2">
             <button
               onClick={handleApplyToInput}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 text-emerald-200 text-xs font-medium transition-colors"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 text-emerald-200 text-xs font-medium transition-colors touch-manipulation"
             >
               <Edit3 className="h-3.5 w-3.5" />
               <span>Edit Question First</span>
             </button>
             <button
               onClick={handleSendImmediately}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-semibold shadow-md transition-all"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-semibold shadow-md transition-all touch-manipulation"
             >
               <Send className="h-3.5 w-3.5" />
               <span>Get Immediate Help</span>

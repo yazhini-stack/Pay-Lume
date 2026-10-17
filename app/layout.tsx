@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -10,6 +10,14 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#060b08",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -17,9 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="antialiased min-h-screen selection:bg-emerald-500/30 selection:text-emerald-200">
+      <body className="antialiased min-h-screen min-h-[100dvh] overflow-x-hidden selection:bg-emerald-500/30 selection:text-emerald-200">
         <Providers>{children}</Providers>
       </body>
     </html>
   );
 }
+

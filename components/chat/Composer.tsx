@@ -383,24 +383,25 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
       >
         {/* Attached Evidence Removable Chip */}
         {activeEvidence && (
-          <div className="mb-2 flex items-center gap-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-emerald-950/80 border border-emerald-500/30 text-xs text-emerald-200 shadow-sm animate-in fade-in">
+          <div className="mb-2 flex items-center gap-2 overflow-hidden">
+            <div className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-2xl bg-emerald-950/80 border border-emerald-500/30 text-xs text-emerald-200 shadow-sm animate-in fade-in min-w-0 max-w-full">
               {getEvidenceIcon(activeEvidence.type)}
-              <span className="font-semibold text-[11px] uppercase tracking-wider text-emerald-400">
+              <span className="font-semibold text-[11px] uppercase tracking-wider text-emerald-400 shrink-0">
                 {activeEvidence.type}:
               </span>
-              <span className="max-w-[200px] sm:max-w-xs truncate font-mono text-[11px]">
+              <span className="max-w-[110px] xs:max-w-[180px] sm:max-w-xs truncate font-mono text-[11px]">
                 {activeEvidence.title}
               </span>
               <button
                 onClick={removeEvidence}
-                className="ml-1 p-0.5 rounded-full hover:bg-emerald-800/60 text-zinc-400 hover:text-white transition-colors"
+                className="ml-1 p-0.5 rounded-full hover:bg-emerald-800/60 text-zinc-400 hover:text-white transition-colors shrink-0 touch-manipulation"
                 title="Remove evidence"
+                aria-label="Remove evidence"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
-            <span className="text-[11px] text-zinc-400 italic hidden sm:inline">
+            <span className="text-[11px] text-zinc-400 italic hidden sm:inline truncate">
               (Persistent context for this conversation)
             </span>
           </div>
@@ -409,12 +410,13 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
         {/* Voice Transcription Error Banner */}
         {sttStatus === "error" && sttError && (
           <div className="mb-2 px-3 py-1.5 rounded-2xl bg-red-950/70 border border-red-500/40 text-[11px] text-red-200 flex items-center justify-between gap-2 animate-in fade-in">
-            <span>{sttError}</span>
+            <span className="truncate">{sttError}</span>
             <button
               type="button"
               onClick={clearSttError}
-              className="p-1 rounded-full hover:bg-red-900/60 text-red-300 hover:text-white transition-colors"
+              className="p-1 rounded-full hover:bg-red-900/60 text-red-300 hover:text-white transition-colors shrink-0"
               title="Dismiss error"
+              aria-label="Dismiss error"
             >
               <X className="h-3 w-3" />
             </button>
@@ -424,13 +426,13 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
         {/* Live Interim Transcription Bar while Listening */}
         {sttStatus === "listening" && (
           <div className="mb-2 px-3 py-2 rounded-2xl bg-red-950/50 border border-red-500/40 text-xs flex items-center justify-between gap-2.5 animate-in fade-in">
-            <div className="flex items-center gap-2 overflow-hidden flex-1">
+            <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
               <span className="flex items-end gap-0.5 h-3 shrink-0">
                 <span className="w-0.5 h-2 bg-red-400 animate-pulse" />
                 <span className="w-0.5 h-3.5 bg-red-300 animate-pulse delay-75" />
                 <span className="w-0.5 h-1.5 bg-red-500 animate-pulse delay-150" />
               </span>
-              <span className="font-semibold text-red-300 text-[11px] shrink-0">Live voice:</span>
+              <span className="font-semibold text-red-300 text-[11px] shrink-0">Live:</span>
               <span className="text-zinc-200 italic truncate text-[11px] font-sans">
                 {interimTranscript || "Listening... speak now"}
               </span>
@@ -439,7 +441,7 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
               <button
                 type="button"
                 onClick={cancelListening}
-                className="px-2.5 py-1 rounded-xl bg-black/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-[11px] font-medium transition-colors border border-white/10"
+                className="px-2 sm:px-2.5 py-1 rounded-xl bg-black/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-[11px] font-medium transition-colors border border-white/10 touch-manipulation"
                 title="Cancel voice input (discard transcript)"
                 aria-label="Cancel voice input"
               >
@@ -448,7 +450,7 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
               <button
                 type="button"
                 onClick={stopListening}
-                className="flex items-center gap-1 px-3 py-1 rounded-xl bg-red-900/80 hover:bg-red-800 text-white text-[11px] font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-xl bg-red-900/80 hover:bg-red-800 text-white text-[11px] font-semibold transition-colors shadow-sm touch-manipulation"
                 title="Finish and keep transcript in composer"
                 aria-label="Finish and keep transcript"
               >
@@ -474,7 +476,7 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
                 ? "Ask a question about this evidence (e.g., 'Is it safe to pay this?')..."
                 : "Ask anything about suspicious payments, or attach evidence below..."
             }
-            className="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none max-h-36 py-2 px-2"
+            className="w-full bg-transparent text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none max-h-36 py-2 px-1.5 sm:px-2 leading-relaxed"
           />
 
           {/* Voice Input Button: States for Idle, Listening, Processing, Success */}
@@ -484,7 +486,7 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
               onClick={stopListening}
               aria-label="Stop recording voice input"
               title="Stop listening (Insert transcript)"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 text-red-200 hover:bg-red-900 text-xs font-semibold shrink-0 transition-all shadow-lg animate-pulse"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-red-950/90 border border-red-500/60 text-red-200 hover:bg-red-900 text-xs font-semibold shrink-0 transition-all shadow-lg animate-pulse touch-manipulation"
             >
               <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
               <span>Done</span>
@@ -513,7 +515,7 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
               disabled={disabled || isStreaming}
               aria-label="Start voice input"
               title={isSttSupported ? "Voice input: Speak your question" : "Voice input not supported in this browser"}
-              className="p-2 rounded-2xl text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/60 border border-transparent hover:border-emerald-500/30 transition-all shrink-0"
+              className="p-2 rounded-2xl text-zinc-400 hover:text-emerald-300 hover:bg-emerald-950/60 border border-transparent hover:border-emerald-500/30 transition-all shrink-0 touch-manipulation"
             >
               <Mic className="h-4 w-4" />
             </button>
@@ -521,8 +523,8 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
         </div>
 
         {/* Bottom Toolbar: Attach Button, Already Paid Button, Privacy Reminder, and Send */}
-        <div className="mt-2 pt-2 border-t border-emerald-500/10 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+        <div className="mt-2 pt-2 border-t border-emerald-500/10 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-wrap min-w-0">
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -533,13 +535,15 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
             />
             
             <button
+              type="button"
               onClick={() => checkAndProceedWithUpload(() => fileInputRef.current?.click())}
               disabled={disabled || isStreaming}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-900/60 hover:border-emerald-400/50 text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-900/60 hover:border-emerald-400/50 text-xs font-medium transition-colors shrink-0 touch-manipulation min-h-[34px]"
               title="Attach screenshot, QR, or paste URL"
             >
-              <Paperclip className="h-3.5 w-3.5" />
-              <span>Attach Evidence</span>
+              <Paperclip className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden xs:inline">Attach Evidence</span>
+              <span className="xs:hidden">Attach</span>
             </button>
 
             {/* 🚨 I Already Paid emergency button */}
@@ -547,11 +551,12 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
               type="button"
               onClick={() => openAlreadyPaidModal()}
               disabled={disabled || isStreaming}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-950/40 hover:bg-red-900/60 border border-red-500/25 hover:border-red-500/40 text-red-300 text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-red-950/40 hover:bg-red-900/60 border border-red-500/25 hover:border-red-500/40 text-red-300 text-xs font-medium transition-colors shrink-0 touch-manipulation min-h-[34px]"
               title="Emergency assistance if payment was already made"
             >
-              <AlertOctagon className="h-3.5 w-3.5 text-red-400" />
-              <span>Already Paid? Get Help</span>
+              <AlertOctagon className="h-3.5 w-3.5 text-red-400 shrink-0" />
+              <span className="hidden sm:inline">Already Paid? Get Help</span>
+              <span className="sm:hidden">Already Paid?</span>
             </button>
 
             {/* Persistent compact privacy reminder */}
