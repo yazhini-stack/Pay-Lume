@@ -2,7 +2,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routes import health, chat, auth_routes
+from app.routes import health, chat, auth_routes, voice
 
 # Configure logging
 logging.basicConfig(
@@ -37,6 +37,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(chat.router)
 app.include_router(auth_routes.router)
+app.include_router(voice.router)
 
 @app.on_event("startup")
 async def startup_event():

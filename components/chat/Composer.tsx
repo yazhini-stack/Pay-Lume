@@ -406,6 +406,21 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
           </div>
         )}
 
+        {/* Voice Transcription Error Banner */}
+        {sttStatus === "error" && sttError && (
+          <div className="mb-2 px-3 py-1.5 rounded-2xl bg-red-950/70 border border-red-500/40 text-[11px] text-red-200 flex items-center justify-between gap-2 animate-in fade-in">
+            <span>{sttError}</span>
+            <button
+              type="button"
+              onClick={clearSttError}
+              className="p-1 rounded-full hover:bg-red-900/60 text-red-300 hover:text-white transition-colors"
+              title="Dismiss error"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
         {/* Live Interim Transcription Bar while Listening */}
         {sttStatus === "listening" && (
           <div className="mb-2 px-3 py-2 rounded-2xl bg-red-950/50 border border-red-500/40 text-xs flex items-center justify-between gap-2.5 animate-in fade-in">

@@ -37,9 +37,6 @@ export function MessageItem({ message }: MessageItemProps) {
     playbackStatus,
     speechRate,
     setSpeechRate,
-    playbackEngine,
-    neuralProgress,
-    fallbackNotice,
     speak,
     pause,
     resume,
@@ -223,9 +220,7 @@ export function MessageItem({ message }: MessageItemProps) {
                 <div className="flex items-center gap-2 text-emerald-300">
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
                   <span className="text-[11px] font-medium">
-                    {neuralProgress !== null && neuralProgress > 0 && neuralProgress < 100
-                      ? `Downloading neural model (${neuralProgress}%)...`
-                      : "Preparing neural speech..."}
+                    Synthesizing audio with ElevenLabs...
                   </span>
                 </div>
               ) : isThisPlaying ? (
@@ -237,17 +232,11 @@ export function MessageItem({ message }: MessageItemProps) {
                     <span className="w-0.5 h-3 bg-emerald-400 animate-pulse delay-100" />
                   </span>
                   <span className="text-[11px] font-medium text-emerald-300">
-                    {playbackEngine === "neural" ? "Neural AI reading response..." : "Reading response aloud..."}
+                    Reading response aloud...
                   </span>
-                  {playbackEngine === "neural" ? (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-mono hidden sm:inline-flex items-center gap-1">
-                      <Sparkles className="h-2.5 w-2.5 text-emerald-400" /> Kokoro 82M
-                    </span>
-                  ) : (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 font-mono hidden sm:inline-block">
-                      Browser TTS
-                    </span>
-                  )}
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-mono hidden sm:inline-flex items-center gap-1">
+                    <Sparkles className="h-2.5 w-2.5 text-emerald-400" /> ElevenLabs
+                  </span>
                 </div>
               ) : (
                 <span className="text-[11px] font-medium text-amber-300 flex items-center gap-1.5">
@@ -301,12 +290,6 @@ export function MessageItem({ message }: MessageItemProps) {
               </button>
             </div>
           </div>
-
-          {fallbackNotice && (
-            <div className="text-[10px] text-amber-300/90 font-medium pt-0.5 border-t border-emerald-500/10">
-              Note: {fallbackNotice}
-            </div>
-          )}
         </div>
       )}
 
