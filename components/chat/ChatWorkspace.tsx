@@ -21,6 +21,7 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 import { VoiceSettingsPopover } from "./VoiceSettingsPopover";
 import { useTextToSpeech } from "@/lib/speech/useTextToSpeech";
 import { useSpeechStore } from "@/lib/stores/useSpeechStore";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 interface ChatWorkspaceProps {
   initialConversationId?: string;
@@ -29,6 +30,7 @@ interface ChatWorkspaceProps {
 export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const {
     activeConversationId,
@@ -61,17 +63,17 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
   const [activeSecurityEvidence, setActiveSecurityEvidence] = useState<string[]>([]);
   const [activeTrustedResources, setActiveTrustedResources] = useState<Citation[]>([]);
 
-  // Fetch all conversations
+  // Fetch all conversations for current user
   const { data: conversations = [], isLoading: isConvsLoading } = useQuery({
-    queryKey: ["conversations"],
+    queryKey: ["conversations", user?.id],
     queryFn: () => apiClient.getConversations()
   });
 
   const currentConvId = activeConversationId || initialConversationId;
 
-  // Fetch or hydrate active conversation
+  // Fetch or hydrate active conversation for current user
   const { data: activeConv, isLoading: isConvLoading } = useQuery({
-    queryKey: ["conversation", currentConvId],
+    queryKey: ["conversation", currentConvId, user?.id],
     queryFn: () => (currentConvId ? apiClient.getConversation(currentConvId) : null),
     enabled: Boolean(currentConvId)
   });
@@ -226,6 +228,7 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
           title: question.slice(0, 32)
         });
         convId = createRes.conversationId;
+        userMsg.conversationId = convId;
         setActiveConversationId(convId);
         queryClient.invalidateQueries({ queryKey: ["conversations"] });
         window.history.replaceState(null, "", `/chat/${convId}`);
@@ -233,6 +236,18 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
         setStreamError(err.message || "Failed to initialize conversation.");
         return;
       }
+    } else {
+      userMsg.conversationId = convId;
+    }
+
+    // Persist the user's submitted message before starting AI streaming
+    try {
+      const persistRes = await apiClient.appendUserMessage(convId, userMsg);
+      if (!persistRes.persistedToServer && persistRes.error) {
+        console.warn("[Paylume Chat] User message saved locally; server sync deferred:", persistRes.error);
+      }
+    } catch (persistErr) {
+      console.warn("[Paylume Chat] Error appending user message:", persistErr);
     }
 
     // Set up SSE streaming
@@ -289,10 +304,10 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
             // Turn off streaming AFTER the assistant message has been committed to UI state
             resetStreaming();
 
-            // Auto-read response temporarily disabled for demo safety
-            // if (useSpeechStore.getState().autoReadEnabled) {
-            //   ttsSpeak(asstMsg.id, asstMsg);
-            // }
+            // Auto-read response if enabled
+            if (useSpeechStore.getState().autoReadEnabled) {
+              ttsSpeak(asstMsg.id, asstMsg);
+            }
           } else if (event.type === "error") {
             setStreamError(event.data.message);
             setStreaming(false);
@@ -301,10 +316,36 @@ export function ChatWorkspace({ initialConversationId }: ChatWorkspaceProps) {
         abortController.signal
       );
     } catch (err: any) {
-      if (err.name !== "AbortError") {
+      const isAbort = err.name === "AbortError";
+      if (!isAbort) {
         setStreamError(err.message || "Connection to stream interrupted.");
       }
       setStreaming(false);
+
+      // On network failure, server error, or abort, retain the user's question and any partial assistant response
+      if (accumulatedContent.trim()) {
+        const partialMsg: Message = {
+          id: `msg-bot-${Date.now()}`,
+          conversationId: convId,
+          role: "assistant",
+          content: isAbort ? `${accumulatedContent} [Stopped]` : `${accumulatedContent} [Interrupted]`,
+          citations: accumulatedCitations,
+          securityEvidence: accumulatedEvidence,
+          createdAt: new Date().toISOString()
+        };
+
+        setCurrentMessages((prev) => {
+          if (prev.some((m) => m.id === partialMsg.id)) return prev;
+          return [...prev, partialMsg];
+        });
+
+        await apiClient.appendAssistantMessage(convId, partialMsg).catch((e) => {
+          console.warn("[Paylume Chat] Could not persist partial assistant message:", e);
+        });
+
+        queryClient.invalidateQueries({ queryKey: ["conversation", convId] });
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      }
     }
   };
 

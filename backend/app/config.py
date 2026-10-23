@@ -33,10 +33,8 @@ class Settings:
     MAX_URL_CONTENT_BYTES: int = 1 * 1024 * 1024   # 1 MB
     URL_REQUEST_TIMEOUT_SECONDS: float = 8.0
 
-    # ElevenLabs Voice Configuration (Secret key is read only from server environment)
+    # ElevenLabs Speech-to-Text Configuration (Secret key is read only from server environment)
     ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
-    ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
-    ELEVENLABS_TTS_MODEL: str = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5")
     ELEVENLABS_STT_MODEL: str = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v1")
     ELEVENLABS_REQUEST_TIMEOUT_SECONDS: float = float(os.getenv("ELEVENLABS_REQUEST_TIMEOUT_SECONDS", "30.0"))
     MAX_AUDIO_SIZE_BYTES: int = 15 * 1024 * 1024  # 15 MB audio recording limit

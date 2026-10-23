@@ -57,7 +57,7 @@ export function VoiceSettingsPopover() {
         <Volume2 className="h-3.5 w-3.5 text-emerald-400" />
         <span className="hidden sm:inline">Voice</span>
         <span className="px-1.5 py-0.2 text-[9px] font-mono uppercase rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-          ElevenLabs
+          Native
         </span>
         {autoReadEnabled && (
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" title="Auto-read enabled" />
@@ -74,7 +74,7 @@ export function VoiceSettingsPopover() {
             </div>
             <div className="flex items-center gap-1 text-[10px] text-emerald-400/80 font-mono">
               <Sparkles className="h-3 w-3 text-emerald-400" />
-              <span>AI Audio</span>
+              <span>Web Speech</span>
             </div>
           </div>
 
@@ -83,14 +83,14 @@ export function VoiceSettingsPopover() {
             <div className="flex items-center justify-between">
               <span className="font-medium text-emerald-200 text-[11px]">Speech Provider</span>
               <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-medium">
-                Active
+                Native
               </span>
             </div>
             <p className="text-[11px] text-zinc-300 font-medium">
-              ElevenLabs Voice Intelligence
+              Web Speech API
             </p>
             <p className="text-[10px] text-zinc-400 leading-relaxed">
-              Default English advisor voice for text-to-speech and microphone transcription.
+              Device English speech synthesis for assistant responses.
             </p>
           </div>
 

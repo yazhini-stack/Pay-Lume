@@ -176,7 +176,7 @@ export function MessageItem({ message }: MessageItemProps) {
               )}
               title={
                 isThisLoading
-                  ? "Preparing neural audio..."
+                  ? "Preparing speech..."
                   : isThisPlaying
                   ? "Pause read-aloud"
                   : isThisPaused
@@ -185,7 +185,7 @@ export function MessageItem({ message }: MessageItemProps) {
               }
               aria-label={
                 isThisLoading
-                  ? "Preparing neural audio"
+                  ? "Preparing speech"
                   : isThisPlaying
                   ? "Pause read-aloud"
                   : isThisPaused
@@ -239,7 +239,7 @@ export function MessageItem({ message }: MessageItemProps) {
                     Reading aloud...
                   </span>
                   <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-mono hidden sm:inline-flex items-center gap-1 shrink-0">
-                    <Sparkles className="h-2.5 w-2.5 text-emerald-400" /> ElevenLabs
+                    <Sparkles className="h-2.5 w-2.5 text-emerald-400" /> Web Speech
                   </span>
                 </div>
               ) : (

@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from fastapi import APIRouter, File, UploadFile, HTTPException, status, Depends, Response
+from fastapi import APIRouter, File, UploadFile, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 from app.config import settings
 from app.auth import get_current_user, AuthenticatedUser
@@ -13,11 +13,6 @@ router = APIRouter(prefix="/api/voice", tags=["Voice"])
 
 class TranscribeResponse(BaseModel):
     text: str = Field(..., description="Transcribed speech text")
-
-
-class TTSRequest(BaseModel):
-    text: str = Field(..., min_length=1, max_length=5000, description="Text to synthesize into speech")
-    voice_id: Optional[str] = Field(None, description="Optional override voice ID")
 
 
 @router.post("/transcribe", response_model=TranscribeResponse)
@@ -66,36 +61,3 @@ async def transcribe_voice(
     logger.info(f"User {current_user.id} transcribed {len(audio_bytes)} bytes of audio ({len(transcription)} chars).")
     return TranscribeResponse(text=transcription)
 
-
-@router.post("/tts")
-async def generate_speech(
-    payload: TTSRequest,
-    current_user: AuthenticatedUser = Depends(get_current_user)
-):
-    """
-    Synthesizes speech from text using ElevenLabs Text-to-Speech API.
-    Protected endpoint: requires valid Supabase authentication.
-    Returns playable MP3 audio stream.
-    """
-    clean_text = payload.text.strip()
-    if not clean_text:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The text field cannot be empty."
-        )
-
-    audio_bytes = await elevenlabs_service.text_to_speech(
-        text=clean_text,
-        voice_id=payload.voice_id
-    )
-
-    logger.info(f"User {current_user.id} synthesized speech for {len(clean_text)} chars ({len(audio_bytes)} bytes audio).")
-
-    return Response(
-        content=audio_bytes,
-        media_type="audio/mpeg",
-        headers={
-            "Content-Disposition": "inline; filename=speech.mp3",
-            "Cache-Control": "private, no-transform, max-age=300",
-        }
-    )
