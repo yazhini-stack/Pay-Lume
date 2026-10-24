@@ -288,8 +288,9 @@ export function ConversationSidebar({
                       e.stopPropagation();
                       onDeleteConversation(conv.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-950/40 transition-all flex-shrink-0"
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-950/40 transition-all flex-shrink-0 touch-manipulation"
                     title="Delete conversation"
+                    aria-label="Delete conversation"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

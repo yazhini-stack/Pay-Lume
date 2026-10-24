@@ -67,30 +67,30 @@ export function ExtractedContextDisclosure({ extracted }: ExtractedContextDisclo
                 </span>
                 <div className="rounded-xl bg-black/40 p-2.5 space-y-1.5 border border-emerald-500/10 divide-y divide-emerald-500/5">
                   {paymentFields.payee && (
-                    <div className="flex justify-between py-1">
-                      <span className="text-zinc-400">Payee / Recipient:</span>
-                      <span className="text-emerald-200 font-medium">{paymentFields.payee}</span>
+                    <div className="flex justify-between py-1 gap-2">
+                      <span className="text-zinc-400 shrink-0">Payee / Recipient:</span>
+                      <span className="text-emerald-200 font-medium text-right break-all min-w-0">{paymentFields.payee}</span>
                     </div>
                   )}
                   {paymentFields.amount && (
-                    <div className="flex justify-between py-1">
-                      <span className="text-zinc-400">Amount:</span>
-                      <span className="text-emerald-200 font-medium">
+                    <div className="flex justify-between py-1 gap-2">
+                      <span className="text-zinc-400 shrink-0">Amount:</span>
+                      <span className="text-emerald-200 font-medium text-right break-words min-w-0">
                         {paymentFields.currency ? `${paymentFields.currency} ` : ""}
                         {paymentFields.amount}
                       </span>
                     </div>
                   )}
                   {paymentFields.accountOrVpa && (
-                    <div className="flex justify-between py-1">
-                      <span className="text-zinc-400">VPA / Route:</span>
-                      <span className="text-emerald-300 font-mono text-right">{paymentFields.accountOrVpa}</span>
+                    <div className="flex justify-between py-1 gap-2">
+                      <span className="text-zinc-400 shrink-0">VPA / Route:</span>
+                      <span className="text-emerald-300 font-mono text-right break-all min-w-0">{paymentFields.accountOrVpa}</span>
                     </div>
                   )}
                   {paymentFields.bankOrGateway && (
-                    <div className="flex justify-between py-1">
-                      <span className="text-zinc-400">Routing Gateway:</span>
-                      <span className="text-zinc-300">{paymentFields.bankOrGateway}</span>
+                    <div className="flex justify-between py-1 gap-2">
+                      <span className="text-zinc-400 shrink-0">Routing Gateway:</span>
+                      <span className="text-zinc-300 text-right break-words min-w-0">{paymentFields.bankOrGateway}</span>
                     </div>
                   )}
                   {paymentFields.urgencyPhrases && paymentFields.urgencyPhrases.length > 0 && (

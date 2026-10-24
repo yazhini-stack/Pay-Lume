@@ -65,7 +65,7 @@ export function VoiceSettingsPopover() {
       </button>
 
       {isOpen && (
-        <div className="absolute -right-1 sm:right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-80 max-w-xs sm:max-w-sm p-3.5 sm:p-4 rounded-3xl bg-[#09140d]/95 border border-emerald-500/30 shadow-2xl backdrop-blur-2xl z-50 text-xs space-y-4 animate-in fade-in duration-150">
+        <div className="fixed inset-x-3 top-16 sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-2 sm:w-80 max-w-sm mx-auto sm:mx-0 p-3.5 sm:p-4 rounded-3xl bg-[#09140d]/95 border border-emerald-500/30 shadow-2xl backdrop-blur-2xl z-50 text-xs space-y-4 animate-in fade-in duration-150">
           {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-emerald-500/15">
             <div className="flex items-center gap-2">

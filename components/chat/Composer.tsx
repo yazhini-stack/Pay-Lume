@@ -523,7 +523,7 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
         </div>
 
         {/* Bottom Toolbar: Attach Button, Already Paid Button, Privacy Reminder, and Send */}
-        <div className="mt-2 pt-2 border-t border-emerald-500/10 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="mt-2 pt-2 border-t border-emerald-500/10 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5 sm:gap-2.5 flex-wrap min-w-0">
             {/* Hidden file input */}
             <input
@@ -566,7 +566,7 @@ export function Composer({ onSendMessage, disabled }: ComposerProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-auto shrink-0">
             {/* Tooltip for disabled send button when evidence is attached without question */}
             {activeEvidence && !hasQuestion ? (
               <Tooltip content="Please enter a question to analyze this evidence" side="top">

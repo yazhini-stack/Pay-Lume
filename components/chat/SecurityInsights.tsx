@@ -139,7 +139,7 @@ export function SecurityInsights({
                         key={c.id || c.title}
                         className="p-3.5 rounded-xl bg-black/40 border border-emerald-500/15 space-y-2 hover:border-emerald-500/30 transition-colors"
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-col xs:flex-row items-start justify-between gap-2.5 xs:gap-3">
                           <div className="space-y-1 flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30">
@@ -162,7 +162,7 @@ export function SecurityInsights({
                           </div>
 
                           {/* Clickable Official Website Button */}
-                          <div className="shrink-0 self-start">
+                          <div className="shrink-0 self-start pt-1 xs:pt-0">
                             {safeUrl ? (
                               <a
                                 href={safeUrl}
