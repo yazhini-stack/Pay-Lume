@@ -6,51 +6,47 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1"
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 
-class ElevenLabsService:
+class GroqService:
     def __init__(self):
-        self.timeout = settings.ELEVENLABS_REQUEST_TIMEOUT_SECONDS
+        self.timeout = settings.GROQ_REQUEST_TIMEOUT_SECONDS
 
     def _get_api_key(self) -> str:
-        key = (settings.ELEVENLABS_API_KEY or "").strip()
+        key = (settings.GROQ_API_KEY or "").strip()
         if not key:
-            logger.error("ELEVENLABS_API_KEY is not configured in backend environment.")
+            logger.error("GROQ_API_KEY is not configured in backend environment.")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Voice service is not configured on the server (missing ELEVENLABS_API_KEY)."
+                detail="Voice service is not configured on the server (missing GROQ_API_KEY)."
             )
         return key
 
     def _extract_safe_error_detail(self, response: httpx.Response) -> str:
         """
-        Extracts a sanitized, safe explanation from an ElevenLabs error response.
+        Extracts a sanitized, safe explanation from a Groq error response.
         Never exposes credentials or internal server traces.
         """
         safe_msg = ""
         try:
             data = response.json()
-            detail = data.get("detail", {})
-            if isinstance(detail, dict):
-                safe_msg = detail.get("message") or detail.get("status") or ""
-            elif isinstance(detail, str):
-                safe_msg = detail
-            elif isinstance(detail, list) and len(detail) > 0:
-                first = detail[0]
-                if isinstance(first, dict):
-                    safe_msg = first.get("msg") or str(first)
-                else:
-                    safe_msg = str(first)
-
-            if not safe_msg and "message" in data:
-                safe_msg = str(data["message"])
+            if isinstance(data, dict):
+                error_obj = data.get("error", {})
+                if isinstance(error_obj, dict):
+                    safe_msg = error_obj.get("message") or error_obj.get("code") or ""
+                elif isinstance(error_obj, str):
+                    safe_msg = error_obj
+                elif "detail" in data:
+                    safe_msg = str(data["detail"])
+                elif "message" in data:
+                    safe_msg = str(data["message"])
         except Exception:
             pass
 
         if not safe_msg:
             clean = response.text.replace("\n", " ").strip()
-            safe_msg = clean[:150] if clean else "Unknown error from speech service."
+            safe_msg = clean[:150] if clean else "Unknown error from transcription service."
 
         return safe_msg
 
@@ -61,7 +57,8 @@ class ElevenLabsService:
         content_type: Optional[str] = None
     ) -> str:
         """
-        Transcribes speech from audio bytes using ElevenLabs Speech-to-Text API (Scribe).
+        Transcribes speech from audio bytes using Groq Whisper API (whisper-large-v3-turbo).
+        Endpoint: https://api.groq.com/openai/v1/audio/transcriptions
         """
         api_key = self._get_api_key()
 
@@ -69,11 +66,14 @@ class ElevenLabsService:
         clean_content_type = content_type or "audio/webm"
 
         headers = {
-            "xi-api-key": api_key,
+            "Authorization": f"Bearer {api_key}",
         }
 
         data = {
-            "model_id": settings.ELEVENLABS_STT_MODEL,
+            "model": settings.GROQ_STT_MODEL,
+            "response_format": "json",
+            "language": "en",
+            "temperature": "0.0",
         }
 
         files = {
@@ -83,33 +83,41 @@ class ElevenLabsService:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{ELEVENLABS_BASE_URL}/speech-to-text",
+                    f"{GROQ_BASE_URL}/audio/transcriptions",
                     headers=headers,
                     data=data,
                     files=files
                 )
 
             if response.status_code == 401:
-                logger.error("ElevenLabs API rejected request with 401 Unauthorized.")
+                logger.error("Groq API rejected request with 401 Unauthorized.")
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="ElevenLabs API key is unauthorized or invalid (HTTP 401)."
+                    detail="Groq API key is unauthorized or invalid (HTTP 401)."
                 )
 
             if response.status_code == 429:
                 safe_detail = self._extract_safe_error_detail(response)
-                logger.warning(f"ElevenLabs STT rate limit: {safe_detail}")
+                logger.warning(f"Groq STT rate limit encountered: {safe_detail}")
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=f"ElevenLabs rate limit exceeded (HTTP 429): {safe_detail}"
+                    detail=f"Groq transcription rate limit exceeded (HTTP 429): {safe_detail}"
+                )
+
+            if response.status_code == 400:
+                safe_detail = self._extract_safe_error_detail(response)
+                logger.warning(f"Groq STT bad request (invalid audio/parameters): {safe_detail}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid audio format or corrupted file: {safe_detail}"
                 )
 
             if response.status_code != 200:
                 safe_detail = self._extract_safe_error_detail(response)
-                logger.error(f"ElevenLabs STT error: HTTP {response.status_code} - {safe_detail}")
+                logger.error(f"Groq STT error: HTTP {response.status_code} - {safe_detail}")
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"ElevenLabs transcription failed (HTTP {response.status_code}): {safe_detail}"
+                    detail=f"Groq transcription failed (HTTP {response.status_code}): {safe_detail}"
                 )
 
             result = response.json()
@@ -119,18 +127,17 @@ class ElevenLabsService:
         except HTTPException:
             raise
         except httpx.TimeoutException:
-            logger.error("Timeout connecting to ElevenLabs Speech-to-Text API.")
+            logger.error("Timeout connecting to Groq Speech-to-Text API.")
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT,
                 detail="Voice transcription request timed out."
             )
         except Exception as e:
-            logger.error(f"Unexpected error communicating with ElevenLabs STT: {e}", exc_info=True)
+            logger.error(f"Unexpected error communicating with Groq STT: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Failed to transcribe audio."
             )
 
 
-elevenlabs_service = ElevenLabsService()
-
+groq_service = GroqService()

@@ -4,7 +4,7 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, status, Depends
 from pydantic import BaseModel, Field
 from app.config import settings
 from app.auth import get_current_user, AuthenticatedUser
-from app.services.elevenlabs_service import elevenlabs_service
+from app.services.groq_service import groq_service
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ async def transcribe_voice(
     current_user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
-    Transcribes uploaded microphone audio into text using ElevenLabs Scribe STT.
+    Transcribes uploaded microphone audio into text using Groq Whisper STT (whisper-large-v3-turbo).
     Protected endpoint: requires valid Supabase authentication.
     """
     if not file or not file.filename:
@@ -52,7 +52,7 @@ async def transcribe_voice(
         )
 
     content_type = file.content_type or "audio/webm"
-    transcription = await elevenlabs_service.transcribe_audio(
+    transcription = await groq_service.transcribe_audio(
         file_bytes=audio_bytes,
         filename=file.filename,
         content_type=content_type
